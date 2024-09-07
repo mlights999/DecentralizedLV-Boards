@@ -68,6 +68,7 @@ void DashController_CAN::initialize(){
     radiatorPump = false;
     bmsFaultDetected = false;
     rmsFaultDetected = false;
+    boardDetected = false;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
@@ -85,6 +86,7 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
 /// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
 void DashController_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){   //Our message that we received was from this board. Go ahead and import the data to the packets.
+        boardDetected = true;
         rightTurnPWM = msg.byte0;
         leftTurnPWM = msg.byte1;
         batteryFanPWM = msg.byte3;
@@ -122,6 +124,7 @@ void PowerController_CAN::initialize(){
     StartUp = false;
     LowPowerMode = false;
     LowACCBattery = false;
+    boardDetected = false;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
@@ -134,7 +137,41 @@ void PowerController_CAN::sendCANData(CAN_Controller &controller){
 /// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
 void PowerController_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){
+        boardDetected = true;
         //do something with the power controller data
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////         REAR LEFT DRIVER FUNCTIONS        //////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// @brief Creates an instance of the controller to either send or receive CAN frames for this board. Takes agreed upon address for this board. Example: 'LPDRV_RearLeft_CAN pc(0x95);' would create a Rear Left Driver that transmits on 0x95.
+/// @param boardAddr The 32-bit CAN Bus address the Rear Left Driver transmits on.
+LPDRV_RearLeft_CAN::LPDRV_RearLeft_CAN(uint32_t boardAddr){
+    boardAddress = boardAddr;
+}
+
+/// @brief Initializes the control fields of the Rear Left Driver to a default value. 
+void LPDRV_RearLeft_CAN::initialize(){
+    bmsFaultInput = false;
+    switchFaultInput = false;
+    boardDetected = false;
+}
+
+/// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
+/// @param controller The CAN bus controller attached to this microcontroller.
+void LPDRV_RearLeft_CAN::sendCANData(CAN_Controller &controller){
+    controller.CANSend(boardAddress, bmsFaultInput, switchFaultInput, 0, 0, 0, 0, 0, 0);
+}
+
+/// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
+void LPDRV_RearLeft_CAN::receiveCANData(LV_CANMessage msg){
+    if(msg.addr == boardAddress){
+        boardDetected = true;
+        bmsFaultInput = msg.byte0 & 1;  //Extract BMS fault from the first bit of byte 0
+        bmsFaultInput = msg.byte1 & 1;  //Extract BMS fault from the first bit of byte 1
     }
 }
 

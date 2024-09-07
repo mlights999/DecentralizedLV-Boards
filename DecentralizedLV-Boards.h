@@ -87,6 +87,19 @@
 // byte 7: 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//Power Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
+#define REAR_LEFT_DRIVER   0x95
+// byte 0: 
+// byte 1: 
+// byte 2: 
+// byte 3: 
+// byte 4:
+// byte 5:
+// byte 6:
+// byte 7: 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
 
@@ -133,6 +146,7 @@ class DashController_CAN{
     bool radiatorPump;          //Toggle to control the cooling pump for the motor controller.
     bool bmsFaultDetected;      //Flag that is set true if a Battery Management System fault has been detected.
     bool rmsFaultDetected;      //Flag that is set true if a Motor Controller fault has been detected.
+    bool boardDetected;         //Flag set true in receiveCANData when a message from the Dash Controller has been received. Use this on other boards to check if you're hearing from the Dash Controller.
 
     DashController_CAN(uint32_t boardAddr);
     void initialize();
@@ -157,11 +171,25 @@ class PowerController_CAN{
     bool StartUp;               
     bool LowPowerMode;          //Flag indicating to the rest of the system that we are operating in Low Power Mode. Use this to update controls of other boards!
     bool LowACCBattery;         //Flag indicating that the 12V accessory is low (true) or normal (false).
+    bool boardDetected;         //Flag set true in receiveCANData when a message from the Power Controller has been received. Use this on other boards to check if you're hearing from the Power Controller.
+
     PowerController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(CAN_Controller &controller);
     void receiveCANData(LV_CANMessage msg);
 
+};
+
+class LPDRV_RearLeft_CAN{
+    public:
+    uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by DASH_CONTROL_ADDR
+    bool bmsFaultInput;         //This board reads in the Battery Management System fault line and tells the rest of the system if we have a fault.
+    bool switchFaultInput;      //This board reads in the manual kill switch fault line and tells the rest of the system if we have a fault.
+    bool boardDetected;         //Flag set true in receiveCANData when a message from the Power Controller has been received. Use this on other boards to check if you're hearing from the Power Controller.
+    LPDRV_RearLeft_CAN(uint32_t boardAddr);
+    void initialize();
+    void sendCANData(CAN_Controller &controller);
+    void receiveCANData(LV_CANMessage msg);
 };
 
 /// @brief Class to send data from Dash Controller to Camry Instrument Cluster.
