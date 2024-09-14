@@ -121,7 +121,7 @@ class LV_CANMessage{
 /// @brief Class to handle CAN bus controllers (either onboard on Photon or using the MCP2515 on P2/other microcontrollers).
 class CAN_Controller{
     public:
-    void addFilter(uint32_t address, uint32_t mask);
+    void addFilter(uint32_t address);
     bool receive(LV_CANMessage &outputMessage);
     void CANSend(uint16_t Can_addr, byte data0, byte data1, byte data2, byte data3, byte data4, byte data5, byte data6, byte data7);
     #if PLATFORM_ID == PLATFORM_PHOTON_PRODUCTION   //When running on a board with a photon, we'll use the internal controller, no need to specify chip select pin
@@ -129,6 +129,8 @@ class CAN_Controller{
     #else                                           //When running on a P2 or other, we need the MCP2515, which has a chip select pin you must specify.
     void begin(unsigned long baudRate, uint8_t chipSelectPin);
     #endif
+    private:
+    uint8_t filterIndex;
 };
 
 /// @brief Class to send data from Dash Controller OR to receive CAN data from the Dash Controller on other boards.

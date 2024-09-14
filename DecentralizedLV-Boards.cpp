@@ -8,6 +8,8 @@
 
 #else
 
+
+    MCP_CAN *CAN0;
     #include <mcp_can.h>
 
 #endif
@@ -293,8 +295,8 @@ void CAN_Controller::begin(unsigned long baudRate){
 /// @brief Adds a filter to the CAN bus receiving function to only allow messages with a specified address.
 /// @param address Baud rate in bits per second.
 /// @param mask [Advanced] Bit mask for CAN address. Most cases will be 0x7FF
-void CAN_Controller::addFilter(uint32_t address, uint32_t mask){
-    can.addFilter(address, mask);
+void CAN_Controller::addFilter(uint32_t address){
+    can.addFilter(address, 0x7FF);
 }
 
 /// @brief Checks if a message was received on CAN bus and populates the LV_CANMessage with the received data. Do 'LV_CANMessage message;' then 'controller.receive(message);'.
@@ -347,26 +349,36 @@ void CAN_Controller::CANSend(uint16_t Can_addr, byte data0, byte data1, byte dat
 /// @brief Initializes the MCP2515 CAN bus controller on the P2/other with the specified speed and chip select pin.
 /// @param baudRate Baud rate in bits per second.
 void CAN_Controller::begin(unsigned long baudRate, uint8_t chipSelectPin){
-    
+    CAN0 = new MCP_CAN(chipSelectPin);
+    CAN0->begin(MCP_STDEXT, baudRate, MCP_8MHZ);
+    CAN0->setMode(MCP_NORMAL);
+    filterIndex = 0;
 }
 
 /// @brief Adds a filter to the CAN bus receiving function to only allow messages with a specified address.
 /// @param address Baud rate in bits per second.
 /// @param mask [Advanced] Bit mask for CAN address. Most cases will be 0x7FF
-void CAN_Controller::addFilter(uint32_t address, uint32_t mask){
-    
+void CAN_Controller::addFilter(uint32_t address){
+    if(filterIndex == 0){
+        CAN0->init_Mask(0, 0x01FFC000); //this number is 0x7FF bit shifted left by 14. This only allows standard CANBUS IDs
+        CAN0->init_Mask(1, 0x01FFC000); //the first number is the choise of mask (0-5)
+    }
+    if(filterIndex < 6){                              //the MCP only has 6 total filters (6 hex IDs it can accept messages from)
+        CAN0->init_Filt(filterIndex, 0, address<<16); //this tells the MCP to only accept messages matching an ID (address bit shifted by 16)
+        filterIndex++;
+    }
 }
 
 /// @brief Checks if a message was received on CAN bus and populates the LV_CANMessage with the received data. Do 'LV_CANMessage message;' then 'controller.receive(message);'.
 /// @param outputMessage CAN bus message that will be returned by the CAN controller (returns reference). 
 /// @return Boolean indicating whether or not a message was received from the CAN bus
 bool CAN_Controller::receive(LV_CANMessage &outputMessage){
-    bool receivedMessage = CAN0.checkReceive();
+    bool receivedMessage = CAN0->checkReceive();
     if(!receivedMessage) return receivedMessage;
     uint32_t rxId;
     unsigned char len = 0;
     unsigned char rxBuf[8];
-    CAN0.readMsgBuf(&rxId, &len, rxBuf);
+    CAN0->readMsgBuf(&rxId, &len, rxBuf);
     outputMessage.addr = rxId;
     outputMessage.byte0 = rxBuf[0];
     outputMessage.byte1 = rxBuf[1];
@@ -376,6 +388,7 @@ bool CAN_Controller::receive(LV_CANMessage &outputMessage){
     outputMessage.byte5 = rxBuf[5];
     outputMessage.byte6 = rxBuf[6];
     outputMessage.byte7 = rxBuf[7];
+    return true;
 }
 
 /// @brief [Internal Function] Manually sends a CAN bus packet using the CAN bus controller on the address specified with the inputted data. Example: 'CANSend(0x100, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08);' transmits on address 0x100 with the data [1,2,3,4,5,6,7,8]
@@ -390,7 +403,7 @@ bool CAN_Controller::receive(LV_CANMessage &outputMessage){
 /// @param data7 CAN Bus Data 7 field (8 bits)
 void CAN_Controller::CANSend(uint16_t Can_addr, byte data0, byte data1, byte data2, byte data3, byte data4, byte data5, byte data6, byte data7){    //Implementation of CANSend on boards 
     byte data[8] = {data0, data1, data2, data3, data4, data5, data6, data7};
-    byte sndStat = CAN0.sendMsgBuf(Can_addr, 0, 8, data);
+    byte sndStat = CAN0->sendMsgBuf(Can_addr, 0, 8, data);
 }
 
 #endif
