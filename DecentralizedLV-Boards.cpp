@@ -132,15 +132,30 @@ void PowerController_CAN::initialize(){
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
 void PowerController_CAN::sendCANData(CAN_Controller &controller){
-
+    byte tx0 = BrakeSense + (PushToStart << 1) + (ACCharge << 2) + (SolarCharge << 3) + (Horn << 4);
+    byte tx1 = Acc + (Ign << 1) + (FullStart << 2) + (CarOn << 3) + (StartUp << 4);
+    byte tx2 = LowPowerMode + (LowACCBattery << 1) + (boardDetected << 2);
+    controller.CANSend(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);
 }
-
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
 /// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
 void PowerController_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
         //do something with the power controller data
+        BrakeSense = (msg.byte0) & 1;
+        PushToStart = (msg.byte0 >> 1) & 1;
+        ACCharge = (msg.byte0 >> 2) & 1;
+        SolarCharge = (msg.byte0 >> 3) & 1;
+        Horn = (msg.byte0 >> 4) & 1;
+        Acc = (msg.byte1) & 1;
+        Ign = (msg.byte1 >> 1) & 1;
+        FullStart = (msg.byte1 >> 2) & 1;
+        CarOn = (msg.byte1 >> 3) & 1;
+        StartUp = (msg.byte1 >> 4) & 1;
+        LowPowerMode = (msg.byte2) & 1;
+        LowACCBattery = (msg.byte2 >> 1) & 1;
+        boardDetected = (msg.byte2 >> 2) & 1;
     }
 }
 
