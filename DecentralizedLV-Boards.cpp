@@ -267,7 +267,7 @@ void CamryCluster_CAN::sendCANData(CAN_Controller &controller){
     }
 
     uint8_t driveSet = 0;                                       //Drive setting variable, default of 0 (no gear)
-    if(driveMode != DRIVE_MODE_PARK) driveSet = 0x80;           //If not in park mode, set this to 0x80
+    if(driveMode != DRIVE_MODE_PARK && driveMode != DRIVE_MODE_REVERSE) driveSet = 0x80;           //If not in park mode, set this to 0x80
 
     uint8_t driveModifier = 0;                                  //Default normal drive mode (not eco or sport)      
     if(sportMode) driveModifier = 0x10;                         //If bit 1 is set, then we are in sport mode (0x10 to instrument cluster signals sport)
