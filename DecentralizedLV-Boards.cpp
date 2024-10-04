@@ -8,8 +8,6 @@
 
 #else
 
-
-    MCP_CAN *CAN0;
     #include <mcp_can.h>
 
 #endif

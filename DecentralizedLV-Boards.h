@@ -130,6 +130,7 @@ class CAN_Controller{
     void begin(unsigned long baudRate, uint8_t chipSelectPin);
     #endif
     private:
+    MCP_CAN *CAN0;
     uint8_t filterIndex;
 };
 
