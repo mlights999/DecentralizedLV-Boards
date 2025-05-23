@@ -165,7 +165,7 @@ void PowerController_CAN::initialize(){
 void PowerController_CAN::sendCANData(CAN_Controller &controller){
     byte tx0 = BrakeSense + (PushToStart << 1) + (ACCharge << 2) + (SolarCharge << 3) + (Horn << 4);
     byte tx1 = Acc + (Ign << 1) + (FullStart << 2) + (CarOn << 3) + (StartUp << 4);
-    byte tx2 = LowPowerMode + (LowACCBattery << 1) + (boardDetected << 2);
+    byte tx2 = LowPowerMode + (LowACCBattery << 1);
     controller.CANSend(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);
 }
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
@@ -186,7 +186,6 @@ void PowerController_CAN::receiveCANData(LV_CANMessage msg){
         StartUp = (msg.byte1 >> 4) & 1;
         LowPowerMode = (msg.byte2) & 1;
         LowACCBattery = (msg.byte2 >> 1) & 1;
-        boardDetected = (msg.byte2 >> 2) & 1;
     }
 }
 
