@@ -250,7 +250,18 @@
 // byte 7: 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//iBooster Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
+#define IBOOSTER_ADDR   0x214
+// byte 0:
+// byte 1: 
+// byte 2: 
+// byte 3: 
+// byte 4:
+// byte 5: Amount the pedal has been pressed down
+// byte 6:
+// byte 7: 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -427,6 +438,21 @@ class HVController_CAN{
     HVController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(CAN_Controller &controller);
+    void receiveCANData(LV_CANMessage msg);
+
+};
+
+/// @brief Class to send data from HV Controller OR to receive CAN data from the HV Controller on other boards.
+class IBOOSTER_CAN{
+    public:
+    uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by HV_CONTROL_ADDR
+    uint8_t brakePercentage;    //Percentage the brake pedal has been pressed down
+    bool boardDetected;                    //Flag to ensure we have heard from the board
+
+
+    IBOOSTER_CAN(uint32_t boardAddr);
+    void initialize();
+    //void sendCANData(CAN_Controller &controller); No controls yet
     void receiveCANData(LV_CANMessage msg);
 
 };

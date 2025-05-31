@@ -224,6 +224,36 @@ void LPDRV_RearLeft_CAN::receiveCANData(LV_CANMessage msg){
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////         IBOOSTER FUNCTIONS         /////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// @brief Creates an instance of the controller to either send or receive CAN frames for this board. Takes agreed upon address for this board. Example: 'LPDRV_RearLeft_CAN pc(0x95);' would create a Rear Left Driver that transmits on 0x95.
+/// @param boardAddr The 32-bit CAN Bus address the Rear Left Driver transmits on.
+IBOOSTER_CAN::IBOOSTER_CAN(uint32_t boardAddr){
+    boardAddress = boardAddr;
+}
+
+/// @brief Initializes the control fields of the Rear Left Driver to a default value. 
+void IBOOSTER_CAN::initialize(){
+    brakePercentage = 255;  //Null value
+    boardDetected = false;
+}
+
+/// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
+void IBOOSTER_CAN::receiveCANData(LV_CANMessage msg){
+    if(msg.addr == boardAddress){
+        boardDetected = true;
+
+        //msg.byte5 ranges from 0x50 (fully released) to 0xC0 (fully pressed)
+        static int brakeMin = 0x50;
+        static int brakeMax = 0xC0;
+        int brakeVal = constrain(msg.byte5, brakeMin, brakeMax);
+        brakePercentage = (uint8_t)((100 * (brakeVal - brakeMin)) / (brakeMax - brakeMin));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////         POWER CONTROLLER FUNCTIONS        //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
