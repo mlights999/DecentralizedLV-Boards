@@ -354,7 +354,8 @@ void RMSController::receiveHVCANData(LV_CANMessage msg)
   rmsPhaseACurrent = (float)dbc_rms_m166_current_info.d1_phase_a_current_decode();                        // 2 bytes
 
   //Motor and Temperature Info
-  motorRPM = (uint16_t)dbc_rms_m165_motor_position_info.d2_motor_speed_decode();                          // 2 bytes
+  int16_t motorRPMTemp = dbc_rms_m165_motor_position_info.d2_motor_speed_decode();                        // 2 bytes  
+  motorRPM = (motorRPMTemp > 0) ? motorRPMTemp : -motorRPMTemp;     
   commandedTorque = dbc_rms_m172_torque_and_timer_info.d1_commanded_torque_decode();                      // 2 bytes
   motorTemperatureC = (float)dbc_rms_m162_temperature_set_3.d3_motor_temperature_decode();                // 2 bytes
   inverterTemperatureC = (float)dbc_rms_m161_temperature_set_2.d1_control_board_temperature_decode();     // 2 bytes

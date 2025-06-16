@@ -29,6 +29,7 @@
  */
 
 #include <string.h>
+#include "Particle.h"
 
 #include "DecentralizedLV-Boards/HVBoards/dbc_rms.h"
 
@@ -1635,6 +1636,7 @@ int dbc_rms_m165_motor_position_info_t::unpack(
     d1_motor_angle_electrical |= unpack_left_shift_u16(src_p[1], 8u, 0xffu);
     d2_motor_speed = unpack_right_shift_u16(src_p[2], 0u, 0xffu);
     d2_motor_speed |= unpack_left_shift_u16(src_p[3], 8u, 0xffu);
+    Serial.printlnf("d2_motor_speed: %d", d2_motor_speed);
     d3_electrical_output_frequency = unpack_right_shift_u16(src_p[4], 0u, 0xffu);
     d3_electrical_output_frequency |= unpack_left_shift_u16(src_p[5], 8u, 0xffu);
     d4_delta_resolver_filtered = unpack_right_shift_u16(src_p[6], 0u, 0xffu);
@@ -1665,9 +1667,9 @@ int16_t dbc_rms_m165_motor_position_info_t::d2_motor_speed_encode()
     return (int16_t)(d2_motor_speed);
 }
 
-double dbc_rms_m165_motor_position_info_t::d2_motor_speed_decode()
+int16_t dbc_rms_m165_motor_position_info_t::d2_motor_speed_decode()
 {
-    return ((double)d2_motor_speed);
+    return d2_motor_speed;
 }
 
 bool dbc_rms_m165_motor_position_info_t::d2_motor_speed_is_in_range()

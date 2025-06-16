@@ -1960,7 +1960,7 @@ struct dbc_rms_m165_motor_position_info_t:public CAN_STRUCT {
     /**
     * Decode member
     */
-    double d2_motor_speed_decode();
+    int16_t d2_motor_speed_decode();
 
     /**
     * Is in range member
