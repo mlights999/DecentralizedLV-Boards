@@ -29,6 +29,7 @@
  */
 
 #include <string.h>
+#include "Particle.h"
 
 #include "DecentralizedLV-Boards/HVBoards/dbc_bms.h"
 
@@ -163,9 +164,9 @@ uint8_t dbc_bms_msgid_0_x6_b0_t::pack_soc_encode()
     return (uint8_t)(pack_soc / 0.5);
 }
 
-double dbc_bms_msgid_0_x6_b0_t::pack_soc_decode()
+uint8_t dbc_bms_msgid_0_x6_b0_t::pack_soc_decode()
 {
-    return ((double)pack_soc * 0.5);
+    return (pack_soc * 0.5);
 }
 
 bool dbc_bms_msgid_0_x6_b0_t::pack_soc_is_in_range()
