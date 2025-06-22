@@ -174,7 +174,7 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
   packInstantaneousVoltage = (float)dbc_bms_msgid_0_x6_b0.pack_inst_voltage_decode();   //2 bytes
   packAmpHours = (float)dbc_bms_msgid_0_x6_b2.pack_amphours_decode();                   //1 byte
   packResistanceOhms = (float)dbc_bms_msgid_0_x6_b2.pack_resistance_decode();           //1 byte
-  packSOC = (uint8_t)dbc_bms_msgid_0_x6_b0.pack_soc_decode();                           //1 byte          
+  packSOC = dbc_bms_msgid_0_x6_b0.pack_soc_decode();                                    //1 byte          
   //teleP->bms_pack_soc = float_map(teleP->bms_pack_inst_voltage / 104, 2.55, 4, 0, 100);
   inputSupplyVoltage = (float)dbc_bms_msgid_0_x6_b5.input_supply_voltage_decode();      //1 byte
 

@@ -165,7 +165,7 @@ struct dbc_bms_msgid_0_x6_b0_t:public CAN_STRUCT {
     /**
     * Decode member
     */
-    double pack_soc_decode();
+    uint8_t pack_soc_decode();
 
     /**
     * Is in range member
