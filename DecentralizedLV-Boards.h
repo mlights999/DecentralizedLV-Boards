@@ -433,7 +433,13 @@ class HVController_CAN{
     bool Killswitch;                  //Killswitch on the outside of the car
     bool BMSFault;                    //Indicator for a fault in the BMS
     bool boardDetected;                    //Flag to ensure we have heard from the board
-
+    bool dischargeContactorOn;        //Reads from the Orion CANBUS to determine if the discharge contactor is enabled
+    bool chargeContactorOn;           //Reads from the Orion CANBUS to determine if the charge contactor is enabled
+    bool chargeSafetyOn;              //Reads from the Orion CANBUS to determine if the charge safety contactor is enabled
+    uint8_t packSOC;                  //This is a copy from the OrionBMS packSOC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS.
+    float motorTemperatureC;          //This is a copy from the RMS motorTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
+    float inverterTemperatureC;       //This is a copy from the RMS inverterTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
+    uint8_t thermistorHighTempC;      //This is a copy from the OrionBMS thermistorHighTempC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS.
 
     HVController_CAN(uint32_t boardAddr);
     void initialize();

@@ -112,13 +112,21 @@ void HVController_CAN::initialize(){
     Killswitch = false;
     BMSFault = false;
     boardDetected = false;
+    dischargeContactorOn = false;
+    chargeContactorOn = false;
+    chargeSafetyOn = false;
+    motorTemperatureC = 0;
+    inverterTemperatureC = 0;
+    thermistorHighTempC = 0;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
 void HVController_CAN::sendCANData(CAN_Controller &controller){
-    byte tx0 = Killswitch + (BMSFault << 1);
-    controller.CANSend(boardAddress, tx0, 0, 0, 0, 0, 0, 0, 0);
+    byte tx0 = Killswitch + (BMSFault << 1) + (dischargeContactorOn << 2) + (chargeContactorOn << 3) + (chargeSafetyOn << 4);
+    uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
+    uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
+    controller.CANSend(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, 0);
 
 }
 
@@ -130,6 +138,17 @@ void HVController_CAN::receiveCANData(LV_CANMessage msg){
         //do something with the hv controller data
         Killswitch = msg.byte0 & 1;
         BMSFault = (msg.byte0 >> 1) & 1;
+        dischargeContactorOn = (msg.byte0 >> 2) & 1;
+        chargeContactorOn = (msg.byte0 >> 3) & 1;
+        chargeSafetyOn = (msg.byte0 >> 4) & 1;
+        packSOC = msg.byte1;
+
+        uint16_t motorTemperatureTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);            //Convert to 0.1C increments
+        uint16_t inverterTemperatureTemp = (uint16_t)(msg.byte4 << 8 | msg.byte5);            //Convert to 0.1C increments
+        motorTemperatureC = (float)(motorTemperatureTemp / 10.0);                          //Convert to degrees C
+        inverterTemperatureC = (float)(inverterTemperatureTemp / 10.0);                       //Convert to degrees C
+
+        thermistorHighTempC = msg.byte6;
     }
 }
 
