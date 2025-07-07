@@ -33,6 +33,7 @@ void OrionBMS::initialize()
   bmsInternalTempC = 0;                      //Internal thermistor on the BMS
   thermistorHighTempC = 0;                   //Highest temperature read of all thermistors in the thermistor expansion module
   thermistorLowTempC = 0;                    //Lowest temperature read of all thermistors in the thermistor expansion module
+  relayState = 0;                            //Assume all contactors are off
   j1772PlugState = false;                    //True if the J1772 plug is connected to the BMS, false if not. This is used to determine if the car is charging or not.
   j1772ACCurrentLimit = 0;                   //AC current limit set by the J1772 plug, in amps.
   j1772ACVoltage = 0;                        //AC voltage from the J1772 plug, in volts.
@@ -80,7 +81,7 @@ void OrionBMS::sendCurrentLimitAndTemp(CAN_Controller &controller){
 
 void OrionBMS::sendJ1772Stats(CAN_Controller &controller){
   controller.CANSend(j1772Addr, 
-    (uint8_t)j1772PlugState, j1772ACCurrentLimit, j1772ACVoltage, 0, 0, 0, 0, 0);
+    (uint8_t)j1772PlugState, j1772ACCurrentLimit, j1772ACVoltage, (uint8_t)(relayState >> 8), (uint8_t)(relayState & 0xFF), 0, 0, 0);
 }
 
 void OrionBMS::sendCANData(CAN_Controller &controller)
@@ -145,6 +146,8 @@ void OrionBMS::receiveJ1772Stats(LV_CANMessage msg)
   j1772ACVoltage = (uint8_t)msg.byte2;                                                 //AC voltage from the J1772 plug, in volts
 
   j1772Received = true;                                                                //Set the flag to true to indicate that J1772 stats have been received
+
+  relayState = (msg.byte3 << 8) + msg.byte4;                                           //Bitmask for the contactor state from the Orion
 }
 
 void OrionBMS::receiveCANData(LV_CANMessage msg)
@@ -197,6 +200,8 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
   bmsInternalTempC = (uint8_t)dbc_bms_msgid_0_x6_b3.internal_temperature_decode();      //1 byte
   thermistorHighTempC = (uint8_t)dbc_bms_msgid_0_x6_b1.high_temperature_decode();       //1 byte
   thermistorLowTempC = (uint8_t)dbc_bms_msgid_0_x6_b1.low_temperature_decode();         //1 byte
+
+  relayState = dbc_bms_msgid_0_x6_b0.relay_state_decode();                              //2 bytes
 
   j1772PlugState = (bool)dbc_bms_msgid_0_x6_b3.j1772_plug_state_decode();               //1 bit
   j1772ACCurrentLimit = (uint8_t)dbc_bms_msgid_0_x6_b3.j1772_ac_current_limit_decode(); //1 byte

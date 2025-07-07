@@ -181,9 +181,9 @@ uint16_t dbc_bms_msgid_0_x6_b0_t::relay_state_encode()
     return (uint16_t)(relay_state);
 }
 
-double dbc_bms_msgid_0_x6_b0_t::relay_state_decode()
+uint16_t dbc_bms_msgid_0_x6_b0_t::relay_state_decode()
 {
-    return ((double)relay_state);
+    return relay_state;
 }
 
 bool dbc_bms_msgid_0_x6_b0_t::relay_state_is_in_range()

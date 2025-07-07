@@ -105,6 +105,8 @@ class OrionBMS {
     uint16_t chargeCurrentLimit;        //Charge current limit in amps, set by the Orion BMS. This is the maximum charge current that can be sent to the pack.
     uint16_t dischargeCurrentLimit;     //Discharge current limit in amps, set by the Orion BMS. This is the maximum discharge current that can be sent from the pack.
 
+    uint16_t relayState;                //Bitmask to hold contactor states of orion BMS
+
     bool j1772PlugState;                //True if the J1772 plug is connected to the BMS, false if not. This is used to determine if the car is charging or not.
     uint8_t j1772ACCurrentLimit;          //AC current limit set by the J1772 plug, in amps.
     uint8_t j1772ACVoltage;               //AC voltage from the J1772 plug, in volts.

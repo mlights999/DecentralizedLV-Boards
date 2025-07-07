@@ -181,7 +181,7 @@ struct dbc_bms_msgid_0_x6_b0_t:public CAN_STRUCT {
     /**
     * Decode member
     */
-    double relay_state_decode();
+    uint16_t relay_state_decode();
 
     /**
     * Is in range member
