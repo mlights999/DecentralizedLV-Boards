@@ -263,6 +263,21 @@
 // byte 7: 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//App Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
+#define APPCONTROL_ADDR   0x101
+// byte 0: b0: leftTurnSignal, b1: rightTurnSignal, b2: headlight, b3: horn
+// byte 1: driveMode (see DRIVE_MODE_* macros)
+// byte 2: b0: Acc, b1: Ignition, b2: FullStart
+// byte 3: 
+// byte 4:
+// byte 5:
+// byte 6:
+// byte 7:
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 
 /// @brief Generic CAN bus message with address and data fields.
@@ -461,6 +476,26 @@ class IBOOSTER_CAN{
     //void sendCANData(CAN_Controller &controller); No controls yet
     void receiveCANData(LV_CANMessage msg);
 
+};
+
+/// @brief Class to send data from the in-app controls to the system. It should only contain the fields that the app itself controls, not the telemetry that the app only receives.
+class AppController_CAN{
+    public:
+    uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by DASH_CONTROL_ADDR
+    bool leftTurnSignal;
+    bool rightTurnSignal;
+    bool headlight;
+    bool horn;
+    byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
+    bool Acc;                //Set true if the car is in accessory mode, false if not
+    bool Ign;            //Set true if the car is in ignition mode, false if not. This is used to turn on the 12V busbar.
+    bool FullStart;         //Set true if the car is in full start mode, false if not. This is used to turn on the HV busbar.
+    bool boardDetected;       //Flag to ensure we have heard from the board
+
+    AppController_CAN(uint32_t boardAddr);
+    void initialize();
+    void sendCANData(CAN_Controller &controller);
+    void receiveCANData(LV_CANMessage msg);
 };
 
 #endif
