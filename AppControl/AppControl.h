@@ -2,14 +2,63 @@
 #define ARDUINOJSON_ENABLE_PROGMEM 0  //Important: this needs to go before any ArduinoJson includes to disable PROGMEM support
 #include <ArduinoJson.h>
 #include <string>
+#include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
 
 class AppStatus {
 public:
-    
-    // Fields that the App can only read
-    uint8_t batterySOC;         // State of Charge (0-100)
-    float batteryVoltage;       // In volts
-    float motorTempC;           // Motor controller temperature in Celsius
+    // Fields that the App can read   
+    // HVController_CAN fields
+    bool Killswitch;
+    bool BMSFault;
+    bool hvBoardDetected;
+    bool dischargeContactorOn;
+    bool chargeContactorOn;
+    bool chargeSafetyOn;
+    uint8_t hvPackSOC;
+    float hvMotorTemperatureC;
+    float hvInverterTemperatureC;
+    uint8_t hvThermistorHighTempC;
+
+    // OrionBMS fields
+    uint8_t batterySOC;
+    float batteryVoltage;
+    float packCurrentAmps;
+    float packInstantaneousVoltage;
+    float inputSupplyVoltage;
+    float avgCellVoltage;
+    float highestCellVoltage;
+    float lowestCellVoltage;
+    float packAmpHours;
+    float packResistanceOhms;
+    float lowestCellResistanceOhms;
+    uint16_t dtcFlags1;
+    uint16_t dtcFlags2;
+    uint16_t dischargeCurrentLimit;
+    uint16_t chargeCurrentLimit;
+    uint8_t bmsAverageTempC;
+    uint8_t bmsInternalTempC;
+    uint8_t thermistorHighTempC;
+    uint8_t thermistorLowTempC;
+    uint16_t relayState;
+    bool j1772PlugState;
+    uint8_t j1772ACCurrentLimit;
+    uint8_t j1772ACVoltage;
+
+    // RMSController fields
+    uint16_t postFaultHigh;
+    uint16_t postFaultLow;
+    uint16_t runFaultHigh;
+    uint16_t runFaultLow;
+    float accessoryVoltage;
+    float busVoltage;
+    float busCurrent;
+    float commandedTorque;
+    float rmsPhaseACurrent;
+    float rmsMotorTemperatureC;
+    float rmsInverterTemperatureC;
+    uint16_t motorRPM;
+    float motorTempC;
+    bool faultActive;
 
     // Fields that the App can set
     bool leftTurnSignal;
@@ -23,9 +72,14 @@ public:
 
     AppStatus();
 
-    // Encode fields to JSON string
-    std::string toJSON() const;
+    void copyFromHVController(const HVController_CAN& hv);
+    void copyFromOrionBMS(const OrionBMS& bms);
+    void copyFromRMSController(const RMSController& rms);
 
-    // Decode fields from JSON string
+    std::string toPowerControllerJSON() const;
+    std::string toOrionBMSJSON() const;
+    std::string toDashboardJSON() const;
+    std::string toRMSJSON() const;
+
     bool fromJSON(const std::string& json);
 };

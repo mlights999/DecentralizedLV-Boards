@@ -1,3 +1,6 @@
+#ifndef DECENTRALIZEDLV_HVBOARDS_H
+#define DECENTRALIZEDLV_HVBOARDS_H
+
 /* RMS Frame ids. */
 #define DBC_RMS_M172_TORQUE_AND_TIMER_INFO_FRAME_ID (0xacu)
 #define DBC_RMS_M192_COMMAND_MESSAGE_FRAME_ID (0xc0u)
@@ -205,3 +208,5 @@ class RMSController {
     void receiveCANData(LV_CANMessage msg);     //Receives data from the HV Controller (or whichever board is translating the HV CAN Bus to the LV CAN Bus) and parses it into this object
     void receiveHVCANData(LV_CANMessage msg);   //Takes messages from the HV CAN Bus and parses them into this object which can then be sent on the LV CAN Bus
 };
+
+#endif // DECENTRALIZEDLV_HVBOARDS_H
