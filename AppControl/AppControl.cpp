@@ -2,7 +2,7 @@
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
 
 AppStatus::AppStatus() :
-    batterySOC(0), batteryVoltage(0.0f), motorTempC(0.0f),
+    batterySOC(0), motorTempC(0.0f),
     Killswitch(false), BMSFault(false), hvBoardDetected(false),
     dischargeContactorOn(false), chargeContactorOn(false), chargeSafetyOn(false),
     hvPackSOC(0), hvMotorTemperatureC(0.0f), hvInverterTemperatureC(0.0f), hvThermistorHighTempC(0),
@@ -12,8 +12,8 @@ AppStatus::AppStatus() :
     dtcFlags1(0), dtcFlags2(0), dischargeCurrentLimit(0), chargeCurrentLimit(0),
     bmsAverageTempC(0), bmsInternalTempC(0), thermistorHighTempC(0), thermistorLowTempC(0),
     relayState(0), j1772PlugState(false), j1772ACCurrentLimit(0), j1772ACVoltage(0),
-    leftTurnSignal(false), rightTurnSignal(false), headlight(false), horn(false),
-    driveMode(0), Acc(false), Ign(false), FullStart(false) {}
+    leftTurnSignal_App(false), rightTurnSignal_App(false), headlight_App(false), horn_App(false),
+    driveMode_App(0), Ign_App(false), FullStart_App(false) {}
 
 void AppStatus::copyFromHVController(const HVController_CAN& hv) {
     Killswitch = hv.Killswitch;
@@ -50,6 +50,7 @@ void AppStatus::copyFromOrionBMS(const OrionBMS& bms) {
     j1772PlugState = bms.j1772PlugState;
     j1772ACCurrentLimit = bms.j1772ACCurrentLimit;
     j1772ACVoltage = bms.j1772ACVoltage;
+    batterySOC = bms.packSOC;
 }
 
 void AppStatus::copyFromRMSController(const RMSController& rms) {
@@ -75,23 +76,23 @@ bool AppStatus::fromJSON(const std::string& json) {
     StaticJsonDocument<256> doc;
     DeserializationError err = deserializeJson(doc, json);
     if (err) return false;
-    leftTurnSignal = doc["leftTurnSignal"] | false;
-    rightTurnSignal = doc["rightTurnSignal"] | false;
-    headlight = doc["headlight"] | false;
-    horn = doc["horn"] | false;
-    driveMode = doc["driveMode"] | 0;
-    Acc = doc["Acc"] | false;
-    Ign = doc["Ign"] | false;
-    FullStart = doc["FullStart"] | false;
+    leftTurnSignal_App = doc["leftTurnSignal"] | false;
+    rightTurnSignal_App = doc["rightTurnSignal"] | false;
+    headlight_App = doc["headlight"] | false;
+    horn_App = doc["horn"] | false;
+    driveMode_App = doc["driveMode"] | 0;
+    Acc_App = doc["acc"] | false;
+    Ign_App = doc["ign"] | false;
+    FullStart_App = doc["fs"] | false;
     return true;
 }
 
 std::string AppStatus::toPowerControllerJSON() const {
     StaticJsonDocument<128> doc;
     doc["type"] = "pc";
-    doc["acc"] = Acc;
-    doc["ign"] = Ign;
-    doc["fs"] = FullStart;
+    doc["acc"] = Acc_App;
+    doc["ign"] = Ign_App;
+    doc["fs"] = FullStart_App;
     std::string output;
     serializeJson(doc, output);
     return output;
@@ -121,6 +122,7 @@ std::string AppStatus::toOrionBMSJSON() const {
     doc["jps"] = j1772PlugState;
     doc["jacl"] = j1772ACCurrentLimit;
     doc["jav"] = j1772ACVoltage;
+    doc["soc"] = batterySOC;
     std::string output;
     serializeJson(doc, output);
     return output;
@@ -150,11 +152,11 @@ std::string AppStatus::toRMSJSON() const {
 std::string AppStatus::toDashboardJSON() const {
     StaticJsonDocument<128> doc;
     doc["type"] = "dash";
-    doc["lts"] = leftTurnSignal;
-    doc["rts"] = rightTurnSignal;
-    doc["hl"] = headlight;
-    doc["hn"] = horn;
-    doc["dm"] = driveMode;
+    doc["lts"] = leftTurnSignal_App;
+    doc["rts"] = rightTurnSignal_App;
+    doc["hl"] = headlight_App;
+    doc["hn"] = horn_App;
+    doc["dm"] = driveMode_App;
     std::string output;
     serializeJson(doc, output);
     return output;

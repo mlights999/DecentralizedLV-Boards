@@ -16,6 +16,7 @@ OrionBMS::OrionBMS(uint32_t packStatsAddress, uint32_t cellStatsDTCAddress, uint
 
 void OrionBMS::initialize()
 {
+  packSOC = 0.0;                             //State of charge of the pack, in 0-100% increments
   packCurrentAmps = 0.0;                     //Current number of amps being charged/discharged from the pack
   packInstantaneousVoltage = 0.0;            //Raw voltage reading of the full pack
   inputSupplyVoltage = 0.0;                  //12V voltage the BMS is getting

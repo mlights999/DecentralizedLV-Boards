@@ -360,6 +360,7 @@ class PowerController_CAN{
     bool LowPowerMode;          //Flag indicating to the rest of the system that we are operating in Low Power Mode. Use this to update controls of other boards!
     bool LowACCBattery;         //Flag indicating that the 12V accessory is low (true) or normal (false).
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Power Controller has been received. Use this on other boards to check if you're hearing from the Power Controller.
+    bool usingAppControl;       // New field: true if using app control, false otherwise
 
     PowerController_CAN(uint32_t boardAddr);
     void initialize();
@@ -485,11 +486,7 @@ class AppController_CAN{
     bool leftTurnSignal;
     bool rightTurnSignal;
     bool headlight;
-    bool horn;
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
-    bool Acc;                //Set true if the car is in accessory mode, false if not
-    bool Ign;            //Set true if the car is in ignition mode, false if not. This is used to turn on the 12V busbar.
-    bool FullStart;         //Set true if the car is in full start mode, false if not. This is used to turn on the HV busbar.
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);

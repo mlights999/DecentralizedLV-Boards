@@ -21,7 +21,6 @@ public:
 
     // OrionBMS fields
     uint8_t batterySOC;
-    float batteryVoltage;
     float packCurrentAmps;
     float packInstantaneousVoltage;
     float inputSupplyVoltage;
@@ -61,14 +60,14 @@ public:
     bool faultActive;
 
     // Fields that the App can set
-    bool leftTurnSignal;
-    bool rightTurnSignal;
-    bool headlight;
-    bool horn;
-    uint8_t driveMode;
-    bool Acc;
-    bool Ign;
-    bool FullStart;
+    bool leftTurnSignal_App;
+    bool rightTurnSignal_App;
+    bool headlight_App;
+    bool horn_App;
+    uint8_t driveMode_App;
+    bool Acc_App;
+    bool Ign_App;
+    bool FullStart_App;
 
     AppStatus();
 

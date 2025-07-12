@@ -176,12 +176,13 @@ void PowerController_CAN::initialize(){
     LowPowerMode = false;
     LowACCBattery = false;
     boardDetected = false;
+    usingAppControl = false;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
 void PowerController_CAN::sendCANData(CAN_Controller &controller){
-    byte tx0 = BrakeSense + (PushToStart << 1) + (ACCharge << 2) + (SolarCharge << 3) + (Horn << 4);
+    byte tx0 = BrakeSense + (PushToStart << 1) + (ACCharge << 2) + (SolarCharge << 3) + (Horn << 4) + (usingAppControl << 5);
     byte tx1 = Acc + (Ign << 1) + (FullStart << 2) + (CarOn << 3) + (StartUp << 4);
     byte tx2 = LowPowerMode + (LowACCBattery << 1);
     controller.CANSend(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);
@@ -197,6 +198,7 @@ void PowerController_CAN::receiveCANData(LV_CANMessage msg){
         ACCharge = (msg.byte0 >> 2) & 1;
         SolarCharge = (msg.byte0 >> 3) & 1;
         Horn = (msg.byte0 >> 4) & 1;
+        usingAppControl = (msg.byte0 >> 5) & 1;
         Acc = (msg.byte1) & 1;
         Ign = (msg.byte1 >> 1) & 1;
         FullStart = (msg.byte1 >> 2) & 1;
@@ -285,40 +287,25 @@ void AppController_CAN::initialize() {
     leftTurnSignal = false;
     rightTurnSignal = false;
     headlight = false;
-    horn = false;
     driveMode = DRIVE_MODE_PARK;
-    Acc = false;
-    Ign = false;
-    FullStart = false;
+    boardDetected = false;
 }
 
-/// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
-/// @param controller The CAN bus controller attached to this microcontroller.
 void AppController_CAN::sendCANData(CAN_Controller &controller) {
     byte tx0 = (leftTurnSignal ? 1 : 0)
              | ((rightTurnSignal ? 1 : 0) << 1)
-             | ((headlight ? 1 : 0) << 2)
-             | ((horn ? 1 : 0) << 3);
+             | ((headlight ? 1 : 0) << 2);
     byte tx1 = driveMode;
-    byte tx2 = (Acc ? 1 : 0)
-             | ((Ign ? 1 : 0) << 1)
-             | ((FullStart ? 1 : 0) << 2);
-    controller.CANSend(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);
+    controller.CANSend(boardAddress, tx0, tx1, 0, 0, 0, 0, 0, 0);
 }
 
-/// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive().
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
     if(msg.addr == boardAddress) {
         boardDetected = true;
         leftTurnSignal = msg.byte0 & 0x01;
         rightTurnSignal = (msg.byte0 >> 1) & 0x01;
         headlight = (msg.byte0 >> 2) & 0x01;
-        horn = (msg.byte0 >> 3) & 0x01;
         driveMode = msg.byte1;
-        Acc = msg.byte2 & 0x01;
-        Ign = (msg.byte2 >> 1) & 0x01;
-        FullStart = (msg.byte2 >> 2) & 0x01;
     }
 }
 
