@@ -155,8 +155,11 @@ std::string AppStatus::toDashboardJSON() const {
     doc["lts"] = leftTurnSignal_App;
     doc["rts"] = rightTurnSignal_App;
     doc["hl"] = headlight_App;
+    doc["hb"] = highbeam_App; // Added highbeam field
     doc["hn"] = horn_App;
-    doc["dm"] = driveMode_App;
+    doc["acc"] = Acc_App;
+    doc["ign"] = Ign_App;
+    doc["fs"] = FullStart_App;
     std::string output;
     serializeJson(doc, output);
     return output;

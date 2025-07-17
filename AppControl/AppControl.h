@@ -63,8 +63,8 @@ public:
     bool leftTurnSignal_App;
     bool rightTurnSignal_App;
     bool headlight_App;
+    bool highbeam_App;
     bool horn_App;
-    uint8_t driveMode_App;
     bool Acc_App;
     bool Ign_App;
     bool FullStart_App;
