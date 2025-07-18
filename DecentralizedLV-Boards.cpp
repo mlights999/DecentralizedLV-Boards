@@ -287,16 +287,18 @@ void AppController_CAN::initialize() {
     leftTurnSignal = false;
     rightTurnSignal = false;
     headlight = false;
-    driveMode = DRIVE_MODE_PARK;
+    highbeam = false;
+    horn = false;
     boardDetected = false;
 }
 
 void AppController_CAN::sendCANData(CAN_Controller &controller) {
     byte tx0 = (leftTurnSignal ? 1 : 0)
              | ((rightTurnSignal ? 1 : 0) << 1)
-             | ((headlight ? 1 : 0) << 2);
-    byte tx1 = driveMode;
-    controller.CANSend(boardAddress, tx0, tx1, 0, 0, 0, 0, 0, 0);
+             | ((headlight ? 1 : 0) << 2)
+             | ((highbeam ? 1 : 0) << 3)
+             | ((horn ? 1 : 0) << 4);
+    controller.CANSend(boardAddress, tx0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
@@ -305,7 +307,8 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         leftTurnSignal = msg.byte0 & 0x01;
         rightTurnSignal = (msg.byte0 >> 1) & 0x01;
         headlight = (msg.byte0 >> 2) & 0x01;
-        driveMode = msg.byte1;
+        highbeam = (msg.byte0 >> 3) & 0x01;
+        horn = (msg.byte0 >> 4) & 0x01;
     }
 }
 

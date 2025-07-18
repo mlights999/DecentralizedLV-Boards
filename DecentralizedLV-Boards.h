@@ -486,7 +486,8 @@ class AppController_CAN{
     bool leftTurnSignal;
     bool rightTurnSignal;
     bool headlight;
-    byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
+    bool highbeam;
+    bool horn;
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);

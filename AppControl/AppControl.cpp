@@ -2,18 +2,61 @@
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
 
 AppStatus::AppStatus() :
-    batterySOC(0), motorTempC(0.0f),
-    Killswitch(false), BMSFault(false), hvBoardDetected(false),
-    dischargeContactorOn(false), chargeContactorOn(false), chargeSafetyOn(false),
-    hvPackSOC(0), hvMotorTemperatureC(0.0f), hvInverterTemperatureC(0.0f), hvThermistorHighTempC(0),
-    packCurrentAmps(0.0f), packInstantaneousVoltage(0.0f), inputSupplyVoltage(0.0f),
-    avgCellVoltage(0.0f), highestCellVoltage(0.0f), lowestCellVoltage(0.0f),
-    packAmpHours(0.0f), packResistanceOhms(0.0f), lowestCellResistanceOhms(0.0f),
-    dtcFlags1(0), dtcFlags2(0), dischargeCurrentLimit(0), chargeCurrentLimit(0),
-    bmsAverageTempC(0), bmsInternalTempC(0), thermistorHighTempC(0), thermistorLowTempC(0),
-    relayState(0), j1772PlugState(false), j1772ACCurrentLimit(0), j1772ACVoltage(0),
-    leftTurnSignal_App(false), rightTurnSignal_App(false), headlight_App(false), horn_App(false),
-    driveMode_App(0), Ign_App(false), FullStart_App(false) {}
+    batterySOC(0),
+    motorTempC(0.0f),
+    Killswitch(false),
+    BMSFault(false),
+    hvBoardDetected(false),
+    dischargeContactorOn(false),
+    chargeContactorOn(false),
+    chargeSafetyOn(false),
+    hvPackSOC(0),
+    hvMotorTemperatureC(0.0f),
+    hvInverterTemperatureC(0.0f),
+    hvThermistorHighTempC(0),
+    packCurrentAmps(0.0f),
+    packInstantaneousVoltage(0.0f),
+    inputSupplyVoltage(0.0f),
+    avgCellVoltage(0.0f),
+    highestCellVoltage(0.0f),
+    lowestCellVoltage(0.0f),
+    packAmpHours(0.0f),
+    packResistanceOhms(0.0f),
+    lowestCellResistanceOhms(0.0f),
+    dtcFlags1(0),
+    dtcFlags2(0),
+    dischargeCurrentLimit(0),
+    chargeCurrentLimit(0),
+    bmsAverageTempC(0),
+    bmsInternalTempC(0),
+    thermistorHighTempC(0),
+    thermistorLowTempC(0),
+    relayState(0),
+    j1772PlugState(false),
+    j1772ACCurrentLimit(0),
+    j1772ACVoltage(0),
+    leftTurnSignal_App(false),
+    rightTurnSignal_App(false),
+    headlight_App(false),
+    highbeam_App(false),
+    horn_App(false),
+    Acc_App(false),
+    Ign_App(false),
+    FullStart_App(false),
+    postFaultHigh(0),
+    postFaultLow(0),
+    runFaultHigh(0),
+    runFaultLow(0),
+    accessoryVoltage(0.0f),
+    busVoltage(0.0f),
+    busCurrent(0.0f),
+    commandedTorque(0.0f),
+    rmsPhaseACurrent(0.0f),
+    rmsMotorTemperatureC(0.0f),
+    rmsInverterTemperatureC(0.0f),
+    motorRPM(0),
+    faultActive(false)
+{}
 
 void AppStatus::copyFromHVController(const HVController_CAN& hv) {
     Killswitch = hv.Killswitch;
@@ -76,14 +119,14 @@ bool AppStatus::fromJSON(const std::string& json) {
     StaticJsonDocument<256> doc;
     DeserializationError err = deserializeJson(doc, json);
     if (err) return false;
-    leftTurnSignal_App = doc["leftTurnSignal"] | false;
-    rightTurnSignal_App = doc["rightTurnSignal"] | false;
-    headlight_App = doc["headlight"] | false;
-    horn_App = doc["horn"] | false;
-    driveMode_App = doc["driveMode"] | 0;
-    Acc_App = doc["acc"] | false;
-    Ign_App = doc["ign"] | false;
-    FullStart_App = doc["fs"] | false;
+    if (doc.containsKey("lts")) leftTurnSignal_App = doc["lts"];
+    if (doc.containsKey("rts")) rightTurnSignal_App = doc["rts"];
+    if (doc.containsKey("hl")) headlight_App = doc["hl"];
+    if (doc.containsKey("hb")) highbeam_App = doc["hb"];
+    if (doc.containsKey("hn")) horn_App = doc["hn"];
+    if (doc.containsKey("acc")) Acc_App = doc["acc"];
+    if (doc.containsKey("ign")) Ign_App = doc["ign"];
+    if (doc.containsKey("fs")) FullStart_App = doc["fs"];
     return true;
 }
 
