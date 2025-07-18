@@ -483,6 +483,7 @@ class IBOOSTER_CAN{
 class AppController_CAN{
     public:
     uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by DASH_CONTROL_ADDR
+    bool usingAppControl;    //Flag to indicate if the app is controlling the car. If false, the car is controlled by the Dash Controller/PowerController buttons.
     bool leftTurnSignal;
     bool rightTurnSignal;
     bool headlight;

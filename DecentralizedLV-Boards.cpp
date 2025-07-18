@@ -284,6 +284,7 @@ AppController_CAN::AppController_CAN(uint32_t boardAddr) {
 
 /// @brief Initializes the control fields of the App Controller to default values.
 void AppController_CAN::initialize() {
+    usingAppControl = false;
     leftTurnSignal = false;
     rightTurnSignal = false;
     headlight = false;
@@ -298,7 +299,7 @@ void AppController_CAN::sendCANData(CAN_Controller &controller) {
              | ((headlight ? 1 : 0) << 2)
              | ((highbeam ? 1 : 0) << 3)
              | ((horn ? 1 : 0) << 4);
-    controller.CANSend(boardAddress, tx0, 0, 0, 0, 0, 0, 0, 0);
+    controller.CANSend(boardAddress, tx0, usingAppControl, 0, 0, 0, 0, 0, 0);
 }
 
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
@@ -309,6 +310,7 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         headlight = (msg.byte0 >> 2) & 0x01;
         highbeam = (msg.byte0 >> 3) & 0x01;
         horn = (msg.byte0 >> 4) & 0x01;
+        usingAppControl = msg.byte1 & 0x01;  // Extract the usingAppControl flag from byte1
     }
 }
 
