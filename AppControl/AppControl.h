@@ -59,18 +59,24 @@ public:
     float motorTempC;
     bool faultActive;
 
+    // PowerController_CAN fields
+    bool Acc;
+    bool Ign;
+    bool FullStart;
+
     // Fields that the App can set
     bool leftTurnSignal_App;
     bool rightTurnSignal_App;
     bool headlight_App;
     bool highbeam_App;
     bool horn_App;
-    bool Acc_App;
-    bool Ign_App;
-    bool FullStart_App;
+    bool Acc_AppSet;
+    bool Ign_AppSet;
+    bool FullStart_AppSet;
 
     AppStatus();
 
+    void copyFromPowerController(const PowerController_CAN& pc);
     void copyFromHVController(const HVController_CAN& hv);
     void copyFromOrionBMS(const OrionBMS& bms);
     void copyFromRMSController(const RMSController& rms);
