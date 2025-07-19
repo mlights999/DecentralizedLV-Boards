@@ -65,12 +65,13 @@ void DashController_CAN::initialize(){
     bmsFaultDetected = false;
     rmsFaultDetected = false;
     boardDetected = false;
+    animationTick = 0;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
 void DashController_CAN::sendCANData(CAN_Controller &controller){
-    byte tx2 = 0;
+    byte tx2 = animationTick;
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
     byte tx5 = 0;
     byte tx6 = driveMode;
@@ -85,6 +86,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         boardDetected = true;
         rightTurnPWM = msg.byte0;
         leftTurnPWM = msg.byte1;
+        animationTick = msg.byte2;
         batteryFanPWM = msg.byte3;
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
