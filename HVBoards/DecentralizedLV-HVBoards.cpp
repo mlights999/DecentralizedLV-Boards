@@ -16,7 +16,8 @@ OrionBMS::OrionBMS(uint32_t packStatsAddress, uint32_t cellStatsDTCAddress, uint
 
 void OrionBMS::initialize()
 {
-  packCurrentAmps = 0.0;                     //Current number of amps being charged/discharged from the pack
+  packRawAmps = 0.0;
+  packCurrentAmps = 0.0;                     //Current number of amps being charged/discharged from the pack (unsigned representation of amps)
   packInstantaneousVoltage = 0.0;            //Raw voltage reading of the full pack
   inputSupplyVoltage = 0.0;                  //12V voltage the BMS is getting
   avgCellVoltage = 0.0;                      //Average voltage of all the cells in the pack (calculated by the BMS)
@@ -44,7 +45,7 @@ void OrionBMS::initialize()
 }
 
 void OrionBMS::sendPackStats(CAN_Controller &controller){
-  uint16_t packCurrentTemp = (uint16_t)(packCurrentAmps * 10);                  //Convert to 0.1A increments
+  uint16_t packCurrentTemp = (uint16_t)(packRawAmps * 10);                  //Convert to 0.1A increments
   uint16_t packVoltageTemp = (uint16_t)(packInstantaneousVoltage * 10);         //Convert to 0.1V increments
   uint8_t packAmpHoursTemp = (uint8_t)(packAmpHours * 10);                      //Convert to 0.1Ah increments
   uint8_t packResistanceTemp = (uint8_t)(packResistanceOhms * 1000);            //Convert to 1mOhm increments
@@ -99,12 +100,15 @@ void OrionBMS::receivePackStats(LV_CANMessage msg)
   uint16_t packCurrentTemp = (uint16_t)(msg.byte0 << 8 | msg.byte1);                  //Convert to 0.1A increments 
   uint16_t packVoltageTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);                 //Convert to 0.1V increments
 
-  packCurrentAmps = (float)(packCurrentTemp / 10.0);                                     //Convert to amps
+  packRawAmps = (uint16_t)(packCurrentTemp / 10.0);                                     //Convert to amps
   packInstantaneousVoltage = (float)(packVoltageTemp / 10.0);                            //Convert to volts
   packAmpHours = (float)(msg.byte4 / 10.0);                                              //Convert to amp hours
   packResistanceOhms = (float)(msg.byte5 / 1000.0);                                      //Convert to ohms
   packSOC = (uint8_t)msg.byte6;                                                          //State of charge is already in 0-100%
   inputSupplyVoltage = (float)(msg.byte7 / 10.0);                                        //Convert to volts
+
+  if(packCurrentTemp >= 32768) packCurrentAmps = (float)(65535 - packCurrentTemp) * -0.1f;
+  else packCurrentAmps = (float)packCurrentTemp * 0.1f;
 
   packStatsReceived = true;                                                              //Set the flag to true to indicate that pack stats have been received
 }
@@ -173,7 +177,7 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
   }
 
   // BMS pack statistics
-  packCurrentAmps = (float)dbc_bms_msgid_0_x6_b0.pack_current_decode();                 //2 bytes
+  double packTemp = dbc_bms_msgid_0_x6_b0.pack_current_decode();                 //2 bytes
   packInstantaneousVoltage = (float)dbc_bms_msgid_0_x6_b0.pack_inst_voltage_decode();   //2 bytes
   packAmpHours = (float)dbc_bms_msgid_0_x6_b2.pack_amphours_decode();                   //1 byte
   packResistanceOhms = (float)dbc_bms_msgid_0_x6_b2.pack_resistance_decode();           //1 byte
@@ -206,7 +210,10 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
   j1772PlugState = (bool)dbc_bms_msgid_0_x6_b3.j1772_plug_state_decode();               //1 bit
   j1772ACCurrentLimit = (uint8_t)dbc_bms_msgid_0_x6_b3.j1772_ac_current_limit_decode(); //1 byte
   j1772ACVoltage = (uint8_t)dbc_bms_msgid_0_x6_b5.j1772_ac_voltage_decode();            //1 byte
+  packRawAmps = (uint16_t)packTemp;
 
+  if(packTemp >= 3276.8) packCurrentAmps = (float)(0.0 - (6553.5 - packTemp));
+  else packCurrentAmps = (float)packTemp;
 }
 
 RMSController::RMSController(uint32_t powerStatAddress, uint32_t motorTempAddress, uint32_t faultsAddress)

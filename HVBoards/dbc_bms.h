@@ -135,6 +135,11 @@ struct dbc_bms_msgid_0_x6_b0_t:public CAN_STRUCT {
     */
     double pack_current_decode();
 
+        /**
+    * Decode member
+    */
+    double pack_current_decode_signed();
+
     /**
     * Is in range member
     */

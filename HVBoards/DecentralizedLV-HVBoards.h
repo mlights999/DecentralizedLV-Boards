@@ -84,6 +84,8 @@ class OrionBMS {
     void receiveCurrentLimitAndTemp(LV_CANMessage msg);         //Receives the current limits and temperatures from the board translating from the HV Bus and parses it into this object
     void receiveJ1772Stats(LV_CANMessage msg);                  //Receives the J1772 charger status from the board translating from the HV Bus and parses it into this object
 
+    uint16_t packRawAmps;               //raw unsigned amps (goes to 65535 when negative amps)
+
     public:
     float packCurrentAmps;              //Current number of amps being charged/discharged from the pack
     float packInstantaneousVoltage;     //Raw voltage reading of the full pack
