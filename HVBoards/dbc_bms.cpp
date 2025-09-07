@@ -130,6 +130,12 @@ uint16_t dbc_bms_msgid_0_x6_b0_t::pack_current_encode()
     return (uint16_t)(pack_current / 0.1);
 }
 
+double dbc_bms_msgid_0_x6_b0_t::pack_current_decode_signed()
+{
+    if(pack_current >= 32768) return ((double)(65535 - pack_current) * -0.1);
+    else return ((double)pack_current * 0.1);
+}
+
 double dbc_bms_msgid_0_x6_b0_t::pack_current_decode()
 {
     return ((double)pack_current * 0.1);
