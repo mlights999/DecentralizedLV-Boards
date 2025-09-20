@@ -45,7 +45,7 @@ void OrionBMS::initialize()
   j1772Received = false;           
 
   for (int i = 0; i < 180; ++i) cellVoltages[i] = 0.0f;
-  lastCellVoltagesSentMs = 0;
+  nextCellBroadcastIndex = 0;
 }
 
 void OrionBMS::sendPackStats(CAN_Controller &controller){
@@ -100,43 +100,39 @@ void OrionBMS::sendCANData(CAN_Controller &controller)
 
 void OrionBMS::sendCellVoltages(CAN_Controller &controller)
 {
-  // Rate limit: once per 2000 ms
-  uint32_t now = System.millis();
-  if (now - lastCellVoltagesSentMs < 2000) return;
-  lastCellVoltagesSentMs = now;
+  // Send one frame per call with three cells, rotating through all 180
+  uint16_t startCell = nextCellBroadcastIndex;
+  uint8_t b0 = (uint8_t)startCell; // starting cell ID for this batch
 
-  // Transmit three cells per frame on CAN ID 0x36
-  for (uint16_t startCell = 0; startCell < 180; startCell += 3) {
-    uint8_t b0 = (uint8_t)startCell; // starting cell ID for this batch
+  auto encodeRaw = [&](int idx) -> uint16_t {
+    if (idx >= 0 && idx < 180) {
+      float v = cellVoltages[idx];
+      if (v < 0) v = 0;
+      return (uint16_t)(v * 10000.0f + 0.5f);
+    }
+    return 0;
+  };
 
-    // Helper to fetch raw voltage in 0.1 mV units
-    auto encodeRaw = [&](int idx) -> uint16_t {
-      if (idx >= 0 && idx < 180) {
-        float v = cellVoltages[idx];
-        if (v < 0) v = 0;
-        return (uint16_t)(v * 10000.0f + 0.5f);
-      }
-      return 0;
-    };
+  uint16_t raw0 = encodeRaw(startCell);
+  uint16_t raw1 = encodeRaw((startCell + 1) % 180);
+  uint16_t raw2 = encodeRaw((startCell + 2) % 180);
 
-    uint16_t raw0 = encodeRaw(startCell);
-    uint16_t raw1 = encodeRaw(startCell + 1);
-    uint16_t raw2 = encodeRaw(startCell + 2);
+  uint8_t b1 = (uint8_t)(raw0 >> 8);
+  uint8_t b2 = (uint8_t)(raw0 & 0xFF);
+  uint8_t b3 = (uint8_t)(raw1 >> 8);
+  uint8_t b4 = (uint8_t)(raw1 & 0xFF);
+  uint8_t b5 = (uint8_t)(raw2 >> 8);
+  uint8_t b6 = (uint8_t)(raw2 & 0xFF);
 
-    uint8_t b1 = (uint8_t)(raw0 >> 8);
-    uint8_t b2 = (uint8_t)(raw0 & 0xFF);
-    uint8_t b3 = (uint8_t)(raw1 >> 8);
-    uint8_t b4 = (uint8_t)(raw1 & 0xFF);
-    uint8_t b5 = (uint8_t)(raw2 >> 8);
-    uint8_t b6 = (uint8_t)(raw2 & 0xFF);
+  // Compute checksum as per spec: (ID + 8 + sum(bytes 0..6)) & 0xFF
+  uint16_t sum = (uint16_t)((DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID & 0x7FF) + 8);
+  sum += b0 + b1 + b2 + b3 + b4 + b5 + b6;
+  uint8_t b7 = (uint8_t)(sum & 0xFF);
 
-    // Compute checksum as per spec: (ID + 8 + sum(bytes 0..6)) & 0xFF
-    uint16_t sum = (uint16_t)((DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID & 0x7FF) + 8);
-    sum += b0 + b1 + b2 + b3 + b4 + b5 + b6;
-    uint8_t b7 = (uint8_t)(sum & 0xFF);
+  controller.CANSend(DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID, b0, b1, b2, b3, b4, b5, b6, b7);
 
-    controller.CANSend(DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID, b0, b1, b2, b3, b4, b5, b6, b7);
-  }
+  // Advance by 3 and wrap around 180
+  nextCellBroadcastIndex = (uint16_t)((startCell + 3) % 180);
 }
 
 void OrionBMS::receivePackStats(LV_CANMessage msg)

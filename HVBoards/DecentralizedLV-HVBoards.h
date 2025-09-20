@@ -91,7 +91,7 @@ class OrionBMS {
     void receiveCellBroadcastLV(LV_CANMessage msg);            //LV-only parse of cell broadcast (ignore bytes 3-7 and checksum)
 
     uint16_t packRawAmps;               //raw unsigned amps (goes to 65535 when negative amps)
-  uint32_t lastCellVoltagesSentMs;    //timestamp for rate-limiting cell voltage publishes
+  uint16_t nextCellBroadcastIndex;    //next starting cell index to broadcast (0..179), step by 3
 
     public:
   // Real-time per-cell voltages (converted to volts). Index is Cell ID (0..179)
