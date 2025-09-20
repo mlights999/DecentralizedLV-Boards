@@ -81,15 +81,21 @@ class OrionBMS {
     void sendCellStatsDTC(CAN_Controller &controller);          //Sends the cell statistics and DTC error codes to the LV CAN Bus
     void sendCurrentLimitAndTemp(CAN_Controller &controller);   //Sends the current limits and temperatures to the LV CAN Bus
     void sendJ1772Stats(CAN_Controller &controller);            //Sends the J1772 charger status to the LV CAN Bus
+    void sendCellVoltages(CAN_Controller &controller);          //Sends per-cell voltages from cellVoltages[] to CAN (rate limited)
 
     void receivePackStats(LV_CANMessage msg);                   //Receives the pack statistics from the board translating from the HV Bus and parses it into this object
     void receiveCellStatsDTC(LV_CANMessage msg);                //Receives the cell statistics and DTC error codes from the board translating from the HV Bus and parses it into this object
     void receiveCurrentLimitAndTemp(LV_CANMessage msg);         //Receives the current limits and temperatures from the board translating from the HV Bus and parses it into this object
     void receiveJ1772Stats(LV_CANMessage msg);                  //Receives the J1772 charger status from the board translating from the HV Bus and parses it into this object
+  void receiveCellBroadcast(LV_CANMessage msg);               //Receives the cell broadcast message with per-cell voltage
+    void receiveCellBroadcastLV(LV_CANMessage msg);            //LV-only parse of cell broadcast (ignore bytes 3-7 and checksum)
 
     uint16_t packRawAmps;               //raw unsigned amps (goes to 65535 when negative amps)
+  uint32_t lastCellVoltagesSentMs;    //timestamp for rate-limiting cell voltage publishes
 
     public:
+  // Real-time per-cell voltages (converted to volts). Index is Cell ID (0..179)
+  float cellVoltages[180];
     float packCurrentAmps;              //Current number of amps being charged/discharged from the pack
     float packInstantaneousVoltage;     //Raw voltage reading of the full pack
     float inputSupplyVoltage;           //12V voltage the BMS is getting
@@ -130,6 +136,9 @@ class OrionBMS {
     void sendCANData(CAN_Controller &controller);
     void receiveCANData(LV_CANMessage msg);     //Receives data from the HV Controller (or whichever board is translating the HV CAN Bus to the LV CAN Bus) and parses it into this object
     void receiveHVCANData(LV_CANMessage msg);   //Takes messages from the HV CAN Bus and parses them into this object which can then be sent on the LV CAN Bus
+
+  // Public entry to parse a cell broadcast CAN message (0x36)
+  void receiveCellData(LV_CANMessage msg);
 };
 
 //Class to represent the Orion BMS on the Low Voltage CAN Bus. This class contains only necessary info that will be parsed from the HV CAN Bus

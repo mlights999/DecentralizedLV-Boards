@@ -43,6 +43,9 @@ void OrionBMS::initialize()
   cellStatsDTCReceived = false;    
   currentLimitTempReceived = false;
   j1772Received = false;           
+
+  for (int i = 0; i < 180; ++i) cellVoltages[i] = 0.0f;
+  lastCellVoltagesSentMs = 0;
 }
 
 void OrionBMS::sendPackStats(CAN_Controller &controller){
@@ -92,6 +95,48 @@ void OrionBMS::sendCANData(CAN_Controller &controller)
   sendCellStatsDTC(controller);         //Sends the cell statistics and DTC error codes to the LV CAN Bus
   sendCurrentLimitAndTemp(controller);  //Sends the current limits and temperatures to the LV CAN Bus
   sendJ1772Stats(controller);           //Sends the J1772 charger status to the LV CAN Bus
+  sendCellVoltages(controller);         //Rate-limited publish of per-cell voltages
+}
+
+void OrionBMS::sendCellVoltages(CAN_Controller &controller)
+{
+  // Rate limit: once per 2000 ms
+  uint32_t now = System.millis();
+  if (now - lastCellVoltagesSentMs < 2000) return;
+  lastCellVoltagesSentMs = now;
+
+  // Transmit three cells per frame on CAN ID 0x36
+  for (uint16_t startCell = 0; startCell < 180; startCell += 3) {
+    uint8_t b0 = (uint8_t)startCell; // starting cell ID for this batch
+
+    // Helper to fetch raw voltage in 0.1 mV units
+    auto encodeRaw = [&](int idx) -> uint16_t {
+      if (idx >= 0 && idx < 180) {
+        float v = cellVoltages[idx];
+        if (v < 0) v = 0;
+        return (uint16_t)(v * 10000.0f + 0.5f);
+      }
+      return 0;
+    };
+
+    uint16_t raw0 = encodeRaw(startCell);
+    uint16_t raw1 = encodeRaw(startCell + 1);
+    uint16_t raw2 = encodeRaw(startCell + 2);
+
+    uint8_t b1 = (uint8_t)(raw0 >> 8);
+    uint8_t b2 = (uint8_t)(raw0 & 0xFF);
+    uint8_t b3 = (uint8_t)(raw1 >> 8);
+    uint8_t b4 = (uint8_t)(raw1 & 0xFF);
+    uint8_t b5 = (uint8_t)(raw2 >> 8);
+    uint8_t b6 = (uint8_t)(raw2 & 0xFF);
+
+    // Compute checksum as per spec: (ID + 8 + sum(bytes 0..6)) & 0xFF
+    uint16_t sum = (uint16_t)((DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID & 0x7FF) + 8);
+    sum += b0 + b1 + b2 + b3 + b4 + b5 + b6;
+    uint8_t b7 = (uint8_t)(sum & 0xFF);
+
+    controller.CANSend(DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID, b0, b1, b2, b3, b4, b5, b6, b7);
+  }
 }
 
 void OrionBMS::receivePackStats(LV_CANMessage msg)
@@ -155,8 +200,58 @@ void OrionBMS::receiveJ1772Stats(LV_CANMessage msg)
   relayState = (msg.byte3 << 8) + msg.byte4;                                           //Bitmask for the contactor state from the Orion
 }
 
+void OrionBMS::receiveCellBroadcast(LV_CANMessage msg)
+{
+  if (msg.addr != DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID) return;
+
+  uint8_t bytes[8] = { msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7 };
+
+  // Compute checksum per spec: (ID + 8 + sum(bytes0..6)) & 0xFF
+  uint16_t sum = (uint16_t)((msg.addr & 0x7FF) + 8); // CAN ID is 11-bit; addition wraps naturally
+  for (int i = 0; i < 7; ++i) sum += bytes[i];
+  uint8_t checksum = (uint8_t)(sum & 0xFF);
+  if (checksum != bytes[7]) return; // invalid message
+
+  uint8_t cellId = bytes[0];
+  if (cellId >= 180) return;
+
+  uint16_t instantVoltage_raw = (uint16_t)((bytes[1] << 8) | bytes[2]); // 0.1 mV units
+  // uint16_t internalRes_raw = (uint16_t)(((bytes[3] & 0x7F) << 8) | bytes[4]); // 0.01 mOhm (15-bit)
+  // bool isShunting = (bytes[3] & 0x80) != 0; // bit 8 in byte 3
+  // uint16_t openVoltage_raw = (uint16_t)((bytes[5] << 8) | bytes[6]); // 0.1 mV units
+
+  // Convert 0.1 mV to volts: value_in_volts = raw / 10000.0
+  cellVoltages[cellId] = (float)instantVoltage_raw / 10000.0f;
+}
+
+void OrionBMS::receiveCellBroadcastLV(LV_CANMessage msg)
+{
+  if (msg.addr != DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID) return;
+
+  uint8_t baseId = msg.byte0;
+  // Decode up to 3 cells: baseId, baseId+1, baseId+2
+  if (baseId < 180) {
+    uint16_t raw0 = (uint16_t)((msg.byte1 << 8) | msg.byte2);
+    cellVoltages[baseId] = (float)raw0 / 10000.0f;
+  }
+  if ((uint16_t)baseId + 1 < 180) {
+    uint16_t raw1 = (uint16_t)((msg.byte3 << 8) | msg.byte4);
+    cellVoltages[baseId + 1] = (float)raw1 / 10000.0f;
+  }
+  if ((uint16_t)baseId + 2 < 180) {
+    uint16_t raw2 = (uint16_t)((msg.byte5 << 8) | msg.byte6);
+    cellVoltages[baseId + 2] = (float)raw2 / 10000.0f;
+  }
+}
+
+void OrionBMS::receiveCellData(LV_CANMessage msg)
+{
+  receiveCellBroadcast(msg);
+}
+
 void OrionBMS::receiveCANData(LV_CANMessage msg)
 {
+  receiveCellBroadcastLV(msg);      // Parse per-cell voltage broadcast (LV variant, ignore checksum/extra fields)
   receivePackStats(msg);            //Receives the pack statistics from the board translating from the HV Bus and parses it into this object
   receiveCellStatsDTC(msg);         //Receives the cell statistics and DTC error codes from the board translating from the HV Bus and parses it into this object
   receiveCurrentLimitAndTemp(msg);  //Receives the current limits and temperatures from the board translating from the HV Bus and parses it into this object
@@ -165,6 +260,12 @@ void OrionBMS::receiveCANData(LV_CANMessage msg)
 
 void OrionBMS::receiveHVCANData(LV_CANMessage msg)
 {
+  // Handle high-rate cell broadcast first for fast path
+  if (msg.addr == DBC_BMS_MSGID_0_X36_CELLBCAST_FRAME_ID) {
+    receiveCellBroadcast(msg);
+    return;
+  }
+
   auto bms = bmscanmap.find(msg.addr);
 
   if (bms != bmscanmap.end()) {
