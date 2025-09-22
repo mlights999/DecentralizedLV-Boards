@@ -35,6 +35,7 @@ AppStatus::AppStatus() :
     j1772PlugState(false),
     j1772ACCurrentLimit(0),
     j1772ACVoltage(0),
+    cellVoltages{0},
     leftTurnSignal_App(false),
     rightTurnSignal_App(false),
     headlight_App(false),
@@ -103,6 +104,10 @@ void AppStatus::copyFromOrionBMS(const OrionBMS& bms) {
     j1772ACCurrentLimit = bms.j1772ACCurrentLimit;
     j1772ACVoltage = bms.j1772ACVoltage;
     batterySOC = bms.packSOC;
+    // Copy per-cell voltages
+    for (size_t i = 0; i < 180; ++i) {
+        cellVoltages[i] = bms.cellVoltages[i];
+    }
 }
 
 void AppStatus::copyFromRMSController(const RMSController& rms) {
@@ -212,6 +217,31 @@ std::string AppStatus::toDashboardJSON() const {
     doc["acc"] = Acc;
     doc["ign"] = Ign;
     doc["fs"] = FullStart;
+    doc["dm"] = DriveMode;
+    std::string output;
+    serializeJson(doc, output);
+    return output;
+}
+
+std::string AppStatus::toCellVoltagesJSON() const {
+    // Send a rotating batch of 36 cells each call
+    constexpr size_t kTotal = 180;
+    constexpr size_t kBatch = 36;
+    static size_t nextStart = 0; // rotates across calls
+
+    size_t start = nextStart;
+    nextStart = (nextStart + kBatch) % kTotal;
+
+    // Capacity: small object + array of 36 floats
+    const size_t cap = 512;
+    DynamicJsonDocument doc(cap);
+    doc["type"] = "cell";
+    doc["frstcll"] = static_cast<uint16_t>(start); // include first cell index
+    JsonArray arr = doc.createNestedArray("cv");
+    for (size_t i = 0; i < kBatch; ++i) {
+        size_t idx = (start + i) % kTotal;
+        arr.add(cellVoltages[idx]);
+    }
     std::string output;
     serializeJson(doc, output);
     return output;

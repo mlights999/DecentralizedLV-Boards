@@ -43,6 +43,9 @@ public:
     uint8_t j1772ACCurrentLimit;
     uint8_t j1772ACVoltage;
 
+    // Per-cell voltages from OrionBMS
+    float cellVoltages[180];
+
     // RMSController fields
     uint16_t postFaultHigh;
     uint16_t postFaultLow;
@@ -63,6 +66,7 @@ public:
     bool Acc;
     bool Ign;
     bool FullStart;
+    uint8_t DriveMode;
 
     // Fields that the App can set
     bool leftTurnSignal_App;
@@ -85,6 +89,7 @@ public:
     std::string toOrionBMSJSON() const;
     std::string toDashboardJSON() const;
     std::string toRMSJSON() const;
+    std::string toCellVoltagesJSON() const; // Serialize cellVoltages[] as JSON array
 
     bool fromJSON(const std::string& json);
 };
