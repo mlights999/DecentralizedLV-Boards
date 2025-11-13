@@ -498,4 +498,16 @@ class AppController_CAN{
     void receiveCANData(LV_CANMessage msg);
 };
 
+// Helper utilities
+/// @brief Merge dash (hardware) and app (software) signals with hardware priority.
+/// If the dash indicates an active PWM (>0) it takes precedence; otherwise the app value is used.
+inline bool mergeHardwarePriorityFromPWM(uint8_t dashPWM, bool appSignal) {
+    return (dashPWM > 0) ? true : appSignal;
+}
+
+/// @brief Merge two boolean signals where the dash (hardware) has priority.
+inline bool mergeHardwarePriorityBool(bool dashSignal, bool appSignal) {
+    return dashSignal ? true : appSignal;
+}
+
 #endif
