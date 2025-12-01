@@ -53,6 +53,9 @@ AppStatus::AppStatus() :
     headlight_Current(false),
     highbeam_Current(false),
     horn_Current(false),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
@@ -213,6 +216,7 @@ std::string AppStatus::toDashboardJSON() const {
     StaticJsonDocument<128> doc;
     doc["type"] = "dash";
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     doc["lts"] = leftTurnSignal_App;
     doc["rts"] = rightTurnSignal_App;
     doc["hl"] = headlight_App;
@@ -222,6 +226,8 @@ std::string AppStatus::toDashboardJSON() const {
     doc["ign"] = Ign_App;
     doc["fs"] = FullStart_App;
 =======
+=======
+>>>>>>> Stashed changes
     // Send the actual current state (merged from manual and app controls)
     doc["lts"] = leftTurnSignal_Current;
     doc["rts"] = rightTurnSignal_Current;

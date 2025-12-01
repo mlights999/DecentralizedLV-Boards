@@ -76,6 +76,13 @@ public:
     bool highbeam_Current;
     bool horn_Current;
 
+    // Actual current state (merged from manual and app controls)
+    bool leftTurnSignal_Current;
+    bool rightTurnSignal_Current;
+    bool headlight_Current;
+    bool highbeam_Current;
+    bool horn_Current;
+
     AppStatus();
 
     void copyFromHVController(const HVController_CAN& hv);
