@@ -41,9 +41,6 @@ AppStatus::AppStatus() :
     headlight_App(false),
     highbeam_App(false),
     horn_App(false),
-    Acc_AppSet(false),
-    Ign_AppSet(false),
-    FullStart_AppSet(false),
     postFaultHigh(0),
     postFaultLow(0),
     runFaultHigh(0),
@@ -138,9 +135,6 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("hl")) headlight_App = doc["hl"];
     if (doc.containsKey("hb")) highbeam_App = doc["hb"];
     if (doc.containsKey("hn")) horn_App = doc["hn"];
-    if (doc.containsKey("acc")) Acc_AppSet = doc["acc"];
-    if (doc.containsKey("ign")) Ign_AppSet = doc["ign"];
-    if (doc.containsKey("fs")) FullStart_AppSet = doc["fs"];
     return true;
 }
 

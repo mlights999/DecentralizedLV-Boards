@@ -74,9 +74,6 @@ public:
     bool headlight_App;
     bool highbeam_App;
     bool horn_App;
-    bool Acc_AppSet;
-    bool Ign_AppSet;
-    bool FullStart_AppSet;
 
     AppStatus();
 
