@@ -40,9 +40,20 @@ AppStatus::AppStatus() :
     headlight_App(false),
     highbeam_App(false),
     horn_App(false),
+<<<<<<< Updated upstream
     Acc_App(false),
     Ign_App(false),
     FullStart_App(false),
+=======
+    Acc_AppSet(false),
+    Ign_AppSet(false),
+    FullStart_AppSet(false),
+    leftTurnSignal_Current(false),
+    rightTurnSignal_Current(false),
+    headlight_Current(false),
+    highbeam_Current(false),
+    horn_Current(false),
+>>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
     runFaultHigh(0),
@@ -110,6 +121,12 @@ void AppStatus::copyFromRMSController(const RMSController& rms) {
     rmsInverterTemperatureC = rms.inverterTemperatureC;
     motorRPM = rms.motorRPM;
     faultActive = rms.faultActive;
+}
+
+void AppStatus::copyFromDashController(const DashController_CAN& dash) {
+    // Copy manual control states from dash controller
+    // Note: leftTurnPWM and rightTurnPWM > 0 indicates the blinker is on
+    // We'll handle this logic in the main loop where we have more context
 }
 
 /// @brief Deserialize JSON string to AppStatus object. ONLY PARSE THE FIELDS THAT THE APP CAN SET.
@@ -195,6 +212,7 @@ std::string AppStatus::toRMSJSON() const {
 std::string AppStatus::toDashboardJSON() const {
     StaticJsonDocument<128> doc;
     doc["type"] = "dash";
+<<<<<<< Updated upstream
     doc["lts"] = leftTurnSignal_App;
     doc["rts"] = rightTurnSignal_App;
     doc["hl"] = headlight_App;
@@ -203,6 +221,42 @@ std::string AppStatus::toDashboardJSON() const {
     doc["acc"] = Acc_App;
     doc["ign"] = Ign_App;
     doc["fs"] = FullStart_App;
+=======
+    // Send the actual current state (merged from manual and app controls)
+    doc["lts"] = leftTurnSignal_Current;
+    doc["rts"] = rightTurnSignal_Current;
+    doc["hl"] = headlight_Current;
+    doc["hb"] = highbeam_Current;
+    doc["hn"] = horn_Current;
+    doc["acc"] = Acc;
+    doc["ign"] = Ign;
+    doc["fs"] = FullStart;
+    doc["dm"] = DriveMode;
+    std::string output;
+    serializeJson(doc, output);
+    return output;
+}
+
+std::string AppStatus::toCellVoltagesJSON() const {
+    // Send a rotating batch of 36 cells each call
+    constexpr size_t kTotal = 180;
+    constexpr size_t kBatch = 36;
+    static size_t nextStart = 0; // rotates across calls
+
+    size_t start = nextStart;
+    nextStart = (nextStart + kBatch) % kTotal;
+
+    // Capacity: small object + array of 36 floats
+    const size_t cap = 512;
+    DynamicJsonDocument doc(cap);
+    doc["type"] = "cell";
+    doc["frstcll"] = static_cast<uint16_t>(start); // include first cell index
+    JsonArray arr = doc.createNestedArray("cv");
+    for (size_t i = 0; i < kBatch; ++i) {
+        size_t idx = (start + i) % kTotal;
+        arr.add(cellVoltages[idx]);
+    }
+>>>>>>> Stashed changes
     std::string output;
     serializeJson(doc, output);
     return output;
