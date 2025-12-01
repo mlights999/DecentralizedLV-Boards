@@ -361,6 +361,7 @@ class PowerController_CAN{
     bool LowPowerMode;          //Flag indicating to the rest of the system that we are operating in Low Power Mode. Use this to update controls of other boards!
     bool LowACCBattery;         //Flag indicating that the 12V accessory is low (true) or normal (false).
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Power Controller has been received. Use this on other boards to check if you're hearing from the Power Controller.
+    bool usingAppControl;       // New field: true if using app control, false otherwise
 
     PowerController_CAN(uint32_t boardAddr);
     void initialize();
@@ -483,6 +484,7 @@ class IBOOSTER_CAN{
 class AppController_CAN{
     public:
     uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by DASH_CONTROL_ADDR
+    bool usingAppControl;    //Flag to indicate if the app is controlling the car. If false, the car is controlled by the Dash Controller/PowerController buttons.
     bool leftTurnSignal;
     bool rightTurnSignal;
     bool headlight;
@@ -495,17 +497,5 @@ class AppController_CAN{
     void sendCANData(CAN_Controller &controller);
     void receiveCANData(LV_CANMessage msg);
 };
-
-// Helper utilities
-/// @brief Merge dash (hardware) and app (software) signals with hardware priority.
-/// If the dash indicates an active PWM (>0) it takes precedence; otherwise the app value is used.
-inline bool mergeHardwarePriorityFromPWM(uint8_t dashPWM, bool appSignal) {
-    return (dashPWM > 0) ? true : appSignal;
-}
-
-/// @brief Merge two boolean signals where the dash (hardware) has priority.
-inline bool mergeHardwarePriorityBool(bool dashSignal, bool appSignal) {
-    return dashSignal ? true : appSignal;
-}
 
 #endif

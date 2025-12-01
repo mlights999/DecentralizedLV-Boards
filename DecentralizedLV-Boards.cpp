@@ -178,12 +178,13 @@ void PowerController_CAN::initialize(){
     LowPowerMode = false;
     LowACCBattery = false;
     boardDetected = false;
+    usingAppControl = false;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
 void PowerController_CAN::sendCANData(CAN_Controller &controller){
-    byte tx0 = BrakeSense + (PushToStart << 1) + (ACCharge << 2) + (SolarCharge << 3) + (Horn << 4);
+    byte tx0 = BrakeSense + (PushToStart << 1) + (ACCharge << 2) + (SolarCharge << 3) + (Horn << 4) + (usingAppControl << 5);
     byte tx1 = Acc + (Ign << 1) + (FullStart << 2) + (CarOn << 3) + (StartUp << 4);
     byte tx2 = LowPowerMode + (LowACCBattery << 1);
     controller.CANSend(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);
@@ -199,6 +200,7 @@ void PowerController_CAN::receiveCANData(LV_CANMessage msg){
         ACCharge = (msg.byte0 >> 2) & 1;
         SolarCharge = (msg.byte0 >> 3) & 1;
         Horn = (msg.byte0 >> 4) & 1;
+        usingAppControl = (msg.byte0 >> 5) & 1;
         Acc = (msg.byte1) & 1;
         Ign = (msg.byte1 >> 1) & 1;
         FullStart = (msg.byte1 >> 2) & 1;
@@ -284,6 +286,7 @@ AppController_CAN::AppController_CAN(uint32_t boardAddr) {
 
 /// @brief Initializes the control fields of the App Controller to default values.
 void AppController_CAN::initialize() {
+    usingAppControl = false;
     leftTurnSignal = false;
     rightTurnSignal = false;
     headlight = false;
@@ -298,7 +301,7 @@ void AppController_CAN::sendCANData(CAN_Controller &controller) {
              | ((headlight ? 1 : 0) << 2)
              | ((highbeam ? 1 : 0) << 3)
              | ((horn ? 1 : 0) << 4);
-    controller.CANSend(boardAddress, tx0, 0, 0, 0, 0, 0, 0, 0);
+    controller.CANSend(boardAddress, tx0, usingAppControl, 0, 0, 0, 0, 0, 0);
 }
 
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
@@ -309,6 +312,7 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         headlight = (msg.byte0 >> 2) & 0x01;
         highbeam = (msg.byte0 >> 3) & 0x01;
         horn = (msg.byte0 >> 4) & 0x01;
+        usingAppControl = msg.byte1 & 0x01;  // Extract the usingAppControl flag from byte1
     }
 }
 
