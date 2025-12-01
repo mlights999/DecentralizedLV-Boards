@@ -7,7 +7,7 @@
 class AppStatus {
 public:
     // Fields that the App can read   
-    // HVController_CAN fields
+    // HVController_CAN fields.
     bool Killswitch;
     bool BMSFault;
     bool hvBoardDetected;
