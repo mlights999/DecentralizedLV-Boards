@@ -80,6 +80,7 @@ public:
     bool Acc;
     bool Ign;
     bool FullStart;
+<<<<<<< Updated upstream
 
     // Actual current state (merged from manual and app controls)
     bool leftTurnSignal_Current;
@@ -94,6 +95,8 @@ public:
     bool headlight_Current;
     bool highbeam_Current;
     bool horn_Current;
+=======
+>>>>>>> Stashed changes
 
     AppStatus();
 
@@ -102,7 +105,11 @@ public:
     void copyFromOrionBMS(const OrionBMS& bms);
     void copyFromRMSController(const RMSController& rms);
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     void copyFromDashController(const DashController_CAN& dash);
+=======
+    void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
+>>>>>>> Stashed changes
 =======
     void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
 >>>>>>> Stashed changes

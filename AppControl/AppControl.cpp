@@ -37,6 +37,7 @@ AppStatus::AppStatus() :
     j1772ACCurrentLimit(0),
     j1772ACVoltage(0),
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     leftTurnSignal_App(false),
     rightTurnSignal_App(false),
     headlight_App(false),
@@ -60,6 +61,8 @@ AppStatus::AppStatus() :
 =======
 >>>>>>> Stashed changes
 =======
+=======
+>>>>>>> Stashed changes
     leftTurnSignal(false),
     rightTurnSignal(false),
     headlight(false),
@@ -71,6 +74,9 @@ AppStatus::AppStatus() :
     Acc(false),
     Ign(false),
     FullStart(false),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
@@ -151,11 +157,14 @@ void AppStatus::copyFromRMSController(const RMSController& rms) {
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 void AppStatus::copyFromDashController(const DashController_CAN& dash) {
     // Copy manual control states from dash controller
     // Note: leftTurnPWM and rightTurnPWM > 0 indicates the blinker is on
     // We'll handle this logic in the main loop where we have more context
 =======
+=======
+>>>>>>> Stashed changes
 void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac) {
     // Logical OR: if either hardware or software says "on", then it's on
     // Hardware has priority - if it's on, software can't turn it off
@@ -167,6 +176,9 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     hazards = leftTurnSignal && rightTurnSignal;
     leftTurnPWM = dc.leftTurnPWM;
     rightTurnPWM = dc.rightTurnPWM;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 }
 
@@ -273,6 +285,7 @@ std::string AppStatus::toDashboardJSON() const {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     doc["lts"] = leftTurnSignal_App;
     doc["rts"] = rightTurnSignal_App;
     doc["hl"] = headlight_App;
@@ -291,6 +304,8 @@ std::string AppStatus::toDashboardJSON() const {
     doc["hb"] = highbeam_Current;
     doc["hn"] = horn_Current;
 =======
+=======
+>>>>>>> Stashed changes
     // Merged states (hardware OR software)
     doc["lts"] = leftTurnSignal;
     doc["rts"] = rightTurnSignal;
@@ -300,11 +315,15 @@ std::string AppStatus::toDashboardJSON() const {
     doc["haz"] = hazards;
     doc["lts_pwm"] = leftTurnPWM;
     doc["rts_pwm"] = rightTurnPWM;
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     doc["acc"] = Acc;
     doc["ign"] = Ign;
     doc["fs"] = FullStart;
     doc["dm"] = DriveMode;
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
     std::string output;
     serializeJson(doc, output);
@@ -330,6 +349,8 @@ std::string AppStatus::toCellVoltagesJSON() const {
         size_t idx = (start + i) % kTotal;
         arr.add(cellVoltages[idx]);
     }
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
