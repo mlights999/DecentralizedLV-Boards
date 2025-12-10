@@ -1,5 +1,6 @@
 #include "AppControl.h"
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
+#include "../DecentralizedLV-Boards.h" // Include for PowerController_CAN
 
 AppStatus::AppStatus() :
     batterySOC(0),
@@ -35,6 +36,7 @@ AppStatus::AppStatus() :
     j1772PlugState(false),
     j1772ACCurrentLimit(0),
     j1772ACVoltage(0),
+<<<<<<< Updated upstream
     leftTurnSignal_App(false),
     rightTurnSignal_App(false),
     headlight_App(false),
@@ -57,6 +59,19 @@ AppStatus::AppStatus() :
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
+=======
+    leftTurnSignal(false),
+    rightTurnSignal(false),
+    headlight(false),
+    highbeam(false),
+    horn(false),
+    hazards(false),
+    leftTurnPWM(0),
+    rightTurnPWM(0),
+    Acc(false),
+    Ign(false),
+    FullStart(false),
+>>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
     runFaultHigh(0),
@@ -69,8 +84,17 @@ AppStatus::AppStatus() :
     rmsMotorTemperatureC(0.0f),
     rmsInverterTemperatureC(0.0f),
     motorRPM(0),
-    faultActive(false)
+    faultActive(false),
+    usingAppControl(false),
+    DriveMode(0)
 {}
+
+void AppStatus::copyFromPowerController(const PowerController_CAN& pc) {
+    usingAppControl = pc.usingAppControl;
+    Acc = pc.Acc;
+    Ign = pc.Ign;
+    FullStart = pc.FullStart;
+}
 
 void AppStatus::copyFromHVController(const HVController_CAN& hv) {
     Killswitch = hv.Killswitch;
@@ -126,10 +150,24 @@ void AppStatus::copyFromRMSController(const RMSController& rms) {
     faultActive = rms.faultActive;
 }
 
+<<<<<<< Updated upstream
 void AppStatus::copyFromDashController(const DashController_CAN& dash) {
     // Copy manual control states from dash controller
     // Note: leftTurnPWM and rightTurnPWM > 0 indicates the blinker is on
     // We'll handle this logic in the main loop where we have more context
+=======
+void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac) {
+    // Logical OR: if either hardware or software says "on", then it's on
+    // Hardware has priority - if it's on, software can't turn it off
+    leftTurnSignal = (dc.leftTurnPWM > 0) || ac.leftTurnSignal;
+    rightTurnSignal = (dc.rightTurnPWM > 0) || ac.rightTurnSignal;
+    headlight = dc.headlight || ac.headlight;
+    highbeam = dc.highbeam || ac.highbeam;
+    horn = ac.horn;  // Horn only comes from app controller (PowerController.Horn is separate)
+    hazards = leftTurnSignal && rightTurnSignal;
+    leftTurnPWM = dc.leftTurnPWM;
+    rightTurnPWM = dc.rightTurnPWM;
+>>>>>>> Stashed changes
 }
 
 /// @brief Deserialize JSON string to AppStatus object. ONLY PARSE THE FIELDS THAT THE APP CAN SET.
@@ -139,23 +177,27 @@ bool AppStatus::fromJSON(const std::string& json) {
     StaticJsonDocument<256> doc;
     DeserializationError err = deserializeJson(doc, json);
     if (err) return false;
-    if (doc.containsKey("lts")) leftTurnSignal_App = doc["lts"];
-    if (doc.containsKey("rts")) rightTurnSignal_App = doc["rts"];
-    if (doc.containsKey("hl")) headlight_App = doc["hl"];
-    if (doc.containsKey("hb")) highbeam_App = doc["hb"];
-    if (doc.containsKey("hn")) horn_App = doc["hn"];
-    if (doc.containsKey("acc")) Acc_App = doc["acc"];
-    if (doc.containsKey("ign")) Ign_App = doc["ign"];
-    if (doc.containsKey("fs")) FullStart_App = doc["fs"];
+    // Note: These values get merged with hardware states in mergeControlStates
+    // For now we just store them temporarily and let the merge happen in the main loop
+    if (doc.containsKey("lts")) leftTurnSignal = doc["lts"];
+    if (doc.containsKey("rts")) rightTurnSignal = doc["rts"];
+    if (doc.containsKey("hl")) headlight = doc["hl"];
+    if (doc.containsKey("hb")) highbeam = doc["hb"];
+    if (doc.containsKey("hn")) horn = doc["hn"];
+    if (doc.containsKey("acc")) Acc = doc["acc"];
+    if (doc.containsKey("ign")) Ign = doc["ign"];
+    if (doc.containsKey("fs")) FullStart = doc["fs"];
     return true;
 }
 
 std::string AppStatus::toPowerControllerJSON() const {
     StaticJsonDocument<128> doc;
     doc["type"] = "pc";
-    doc["acc"] = Acc_App;
-    doc["ign"] = Ign_App;
-    doc["fs"] = FullStart_App;
+    doc["acc"] = Acc;
+    doc["ign"] = Ign;
+    doc["fs"] = FullStart;
+    doc["hn"] = horn;
+    doc["uac"] = usingAppControl;
     std::string output;
     serializeJson(doc, output);
     return output;
@@ -212,9 +254,23 @@ std::string AppStatus::toRMSJSON() const {
     return output;
 }
 
+std::string AppStatus::toCellVoltagesJSON() const {
+    // Create a JSON array with cell voltages
+    // Note: This is a placeholder implementation - adjust based on actual cell voltage data source
+    StaticJsonDocument<512> doc;
+    doc["type"] = "cells";
+    doc["hcv"] = highestCellVoltage;
+    doc["lcv"] = lowestCellVoltage;
+    doc["acv"] = avgCellVoltage;
+    std::string output;
+    serializeJson(doc, output);
+    return output;
+}
+
 std::string AppStatus::toDashboardJSON() const {
-    StaticJsonDocument<128> doc;
+    StaticJsonDocument<256> doc;
     doc["type"] = "dash";
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
     doc["lts"] = leftTurnSignal_App;
@@ -234,10 +290,22 @@ std::string AppStatus::toDashboardJSON() const {
     doc["hl"] = headlight_Current;
     doc["hb"] = highbeam_Current;
     doc["hn"] = horn_Current;
+=======
+    // Merged states (hardware OR software)
+    doc["lts"] = leftTurnSignal;
+    doc["rts"] = rightTurnSignal;
+    doc["hl"] = headlight;
+    doc["hb"] = highbeam;
+    doc["hn"] = horn;
+    doc["haz"] = hazards;
+    doc["lts_pwm"] = leftTurnPWM;
+    doc["rts_pwm"] = rightTurnPWM;
+>>>>>>> Stashed changes
     doc["acc"] = Acc;
     doc["ign"] = Ign;
     doc["fs"] = FullStart;
     doc["dm"] = DriveMode;
+<<<<<<< Updated upstream
     std::string output;
     serializeJson(doc, output);
     return output;
@@ -262,6 +330,8 @@ std::string AppStatus::toCellVoltagesJSON() const {
         size_t idx = (start + i) % kTotal;
         arr.add(cellVoltages[idx]);
     }
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     std::string output;
     serializeJson(doc, output);

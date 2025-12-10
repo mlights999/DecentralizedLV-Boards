@@ -4,6 +4,9 @@
 #include <string>
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
 
+// Forward declaration
+class PowerController_CAN;
+
 class AppStatus {
 public:
     // Fields that the App can read   
@@ -59,15 +62,24 @@ public:
     float motorTempC;
     bool faultActive;
 
-    // Fields that the App can set
-    bool leftTurnSignal_App;
-    bool rightTurnSignal_App;
-    bool headlight_App;
-    bool highbeam_App;
-    bool horn_App;
-    bool Acc_App;
-    bool Ign_App;
-    bool FullStart_App;
+    // PowerController_CAN fields
+    bool usingAppControl;
+
+    // Dashboard fields
+    uint8_t DriveMode;
+
+    // Merged control fields (hardware OR software)
+    bool leftTurnSignal;     // True if either hardware or app has it on
+    bool rightTurnSignal;    // True if either hardware or app has it on
+    bool headlight;          // True if either hardware or app has it on
+    bool highbeam;           // True if either hardware or app has it on
+    bool horn;               // True if either hardware or app has it on
+    bool hazards;            // True if both turn signals are on
+    uint8_t leftTurnPWM;     // PWM value for left turn signal
+    uint8_t rightTurnPWM;    // PWM value for right turn signal
+    bool Acc;
+    bool Ign;
+    bool FullStart;
 
     // Actual current state (merged from manual and app controls)
     bool leftTurnSignal_Current;
@@ -85,15 +97,21 @@ public:
 
     AppStatus();
 
+    void copyFromPowerController(const PowerController_CAN& pc);
     void copyFromHVController(const HVController_CAN& hv);
     void copyFromOrionBMS(const OrionBMS& bms);
     void copyFromRMSController(const RMSController& rms);
+<<<<<<< Updated upstream
     void copyFromDashController(const DashController_CAN& dash);
+=======
+    void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
+>>>>>>> Stashed changes
 
     std::string toPowerControllerJSON() const;
     std::string toOrionBMSJSON() const;
     std::string toDashboardJSON() const;
     std::string toRMSJSON() const;
+    std::string toCellVoltagesJSON() const;
 
     bool fromJSON(const std::string& json);
 };
