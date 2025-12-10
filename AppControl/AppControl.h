@@ -88,6 +88,7 @@ public:
     bool headlight_Current;
     bool highbeam_Current;
     bool horn_Current;
+<<<<<<< Updated upstream
 
     // Actual current state (merged from manual and app controls)
     bool leftTurnSignal_Current;
@@ -96,6 +97,12 @@ public:
     bool highbeam_Current;
     bool horn_Current;
 =======
+>>>>>>> Stashed changes
+=======
+    bool Acc_Current;
+    bool Ign_Current;
+    bool FullStart_Current;
+    uint8_t DriveMode_Current;
 >>>>>>> Stashed changes
 
     AppStatus();

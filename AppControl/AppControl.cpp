@@ -43,19 +43,15 @@ AppStatus::AppStatus() :
     headlight_App(false),
     highbeam_App(false),
     horn_App(false),
-<<<<<<< Updated upstream
     Acc_App(false),
     Ign_App(false),
     FullStart_App(false),
-=======
-    Acc_AppSet(false),
-    Ign_AppSet(false),
-    FullStart_AppSet(false),
     leftTurnSignal_Current(false),
     rightTurnSignal_Current(false),
     headlight_Current(false),
     highbeam_Current(false),
     horn_Current(false),
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 >>>>>>> Stashed changes
 =======
@@ -77,6 +73,12 @@ AppStatus::AppStatus() :
 <<<<<<< Updated upstream
 >>>>>>> Stashed changes
 =======
+>>>>>>> Stashed changes
+=======
+    Acc_Current(false),
+    Ign_Current(false),
+    FullStart_Current(false),
+    DriveMode_Current(0),
 >>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
@@ -286,6 +288,7 @@ std::string AppStatus::toDashboardJSON() const {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     doc["lts"] = leftTurnSignal_App;
     doc["rts"] = rightTurnSignal_App;
     doc["hl"] = headlight_App;
@@ -297,12 +300,15 @@ std::string AppStatus::toDashboardJSON() const {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     // Send the actual current state (merged from manual and app controls)
     doc["lts"] = leftTurnSignal_Current;
     doc["rts"] = rightTurnSignal_Current;
     doc["hl"] = headlight_Current;
     doc["hb"] = highbeam_Current;
     doc["hn"] = horn_Current;
+<<<<<<< Updated upstream
 =======
 =======
 >>>>>>> Stashed changes
@@ -353,6 +359,12 @@ std::string AppStatus::toCellVoltagesJSON() const {
 =======
 >>>>>>> Stashed changes
 =======
+>>>>>>> Stashed changes
+=======
+    doc["acc"] = Acc_Current;
+    doc["ign"] = Ign_Current;
+    doc["fs"] = FullStart_Current;
+    doc["dm"] = DriveMode_Current;
 >>>>>>> Stashed changes
     std::string output;
     serializeJson(doc, output);
