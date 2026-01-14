@@ -80,30 +80,11 @@ public:
     bool Acc;
     bool Ign;
     bool FullStart;
-<<<<<<< Updated upstream
 
-    // Actual current state (merged from manual and app controls)
-    bool leftTurnSignal_Current;
-    bool rightTurnSignal_Current;
-    bool headlight_Current;
-    bool highbeam_Current;
-    bool horn_Current;
-<<<<<<< Updated upstream
-
-    // Actual current state (merged from manual and app controls)
-    bool leftTurnSignal_Current;
-    bool rightTurnSignal_Current;
-    bool headlight_Current;
-    bool highbeam_Current;
-    bool horn_Current;
-=======
->>>>>>> Stashed changes
-=======
     bool Acc_Current;
     bool Ign_Current;
     bool FullStart_Current;
     uint8_t DriveMode_Current;
->>>>>>> Stashed changes
 
     AppStatus();
 
@@ -111,15 +92,7 @@ public:
     void copyFromHVController(const HVController_CAN& hv);
     void copyFromOrionBMS(const OrionBMS& bms);
     void copyFromRMSController(const RMSController& rms);
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    void copyFromDashController(const DashController_CAN& dash);
-=======
     void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
->>>>>>> Stashed changes
-=======
-    void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
->>>>>>> Stashed changes
 
     std::string toPowerControllerJSON() const;
     std::string toOrionBMSJSON() const;

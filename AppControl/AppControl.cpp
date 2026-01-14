@@ -36,29 +36,6 @@ AppStatus::AppStatus() :
     j1772PlugState(false),
     j1772ACCurrentLimit(0),
     j1772ACVoltage(0),
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    leftTurnSignal_App(false),
-    rightTurnSignal_App(false),
-    headlight_App(false),
-    highbeam_App(false),
-    horn_App(false),
-    Acc_App(false),
-    Ign_App(false),
-    FullStart_App(false),
-    leftTurnSignal_Current(false),
-    rightTurnSignal_Current(false),
-    headlight_Current(false),
-    highbeam_Current(false),
-    horn_Current(false),
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
-=======
->>>>>>> Stashed changes
     leftTurnSignal(false),
     rightTurnSignal(false),
     headlight(false),
@@ -70,16 +47,10 @@ AppStatus::AppStatus() :
     Acc(false),
     Ign(false),
     FullStart(false),
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
     Acc_Current(false),
     Ign_Current(false),
     FullStart_Current(false),
     DriveMode_Current(0),
->>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
     runFaultHigh(0),
@@ -158,15 +129,6 @@ void AppStatus::copyFromRMSController(const RMSController& rms) {
     faultActive = rms.faultActive;
 }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-void AppStatus::copyFromDashController(const DashController_CAN& dash) {
-    // Copy manual control states from dash controller
-    // Note: leftTurnPWM and rightTurnPWM > 0 indicates the blinker is on
-    // We'll handle this logic in the main loop where we have more context
-=======
-=======
->>>>>>> Stashed changes
 void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac) {
     // Logical OR: if either hardware or software says "on", then it's on
     // Hardware has priority - if it's on, software can't turn it off
@@ -178,10 +140,6 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     hazards = leftTurnSignal && rightTurnSignal;
     leftTurnPWM = dc.leftTurnPWM;
     rightTurnPWM = dc.rightTurnPWM;
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 }
 
 /// @brief Deserialize JSON string to AppStatus object. ONLY PARSE THE FIELDS THAT THE APP CAN SET.
@@ -284,34 +242,6 @@ std::string AppStatus::toCellVoltagesJSON() const {
 std::string AppStatus::toDashboardJSON() const {
     StaticJsonDocument<256> doc;
     doc["type"] = "dash";
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    doc["lts"] = leftTurnSignal_App;
-    doc["rts"] = rightTurnSignal_App;
-    doc["hl"] = headlight_App;
-    doc["hb"] = highbeam_App; // Added highbeam field
-    doc["hn"] = horn_App;
-    doc["acc"] = Acc_App;
-    doc["ign"] = Ign_App;
-    doc["fs"] = FullStart_App;
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-    // Send the actual current state (merged from manual and app controls)
-    doc["lts"] = leftTurnSignal_Current;
-    doc["rts"] = rightTurnSignal_Current;
-    doc["hl"] = headlight_Current;
-    doc["hb"] = highbeam_Current;
-    doc["hn"] = horn_Current;
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
     // Merged states (hardware OR software)
     doc["lts"] = leftTurnSignal;
     doc["rts"] = rightTurnSignal;
@@ -321,51 +251,10 @@ std::string AppStatus::toDashboardJSON() const {
     doc["haz"] = hazards;
     doc["lts_pwm"] = leftTurnPWM;
     doc["rts_pwm"] = rightTurnPWM;
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-    doc["acc"] = Acc;
-    doc["ign"] = Ign;
-    doc["fs"] = FullStart;
-    doc["dm"] = DriveMode;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    std::string output;
-    serializeJson(doc, output);
-    return output;
-}
-
-std::string AppStatus::toCellVoltagesJSON() const {
-    // Send a rotating batch of 36 cells each call
-    constexpr size_t kTotal = 180;
-    constexpr size_t kBatch = 36;
-    static size_t nextStart = 0; // rotates across calls
-
-    size_t start = nextStart;
-    nextStart = (nextStart + kBatch) % kTotal;
-
-    // Capacity: small object + array of 36 floats
-    const size_t cap = 512;
-    DynamicJsonDocument doc(cap);
-    doc["type"] = "cell";
-    doc["frstcll"] = static_cast<uint16_t>(start); // include first cell index
-    JsonArray arr = doc.createNestedArray("cv");
-    for (size_t i = 0; i < kBatch; ++i) {
-        size_t idx = (start + i) % kTotal;
-        arr.add(cellVoltages[idx]);
-    }
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
     doc["acc"] = Acc_Current;
     doc["ign"] = Ign_Current;
     doc["fs"] = FullStart_Current;
     doc["dm"] = DriveMode_Current;
->>>>>>> Stashed changes
     std::string output;
     serializeJson(doc, output);
     return output;
