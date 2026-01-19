@@ -292,6 +292,8 @@ class CAN_Controller{
     void CANSend(LV_CANMessage inputMessage);
     void changeCANSpeed(uint32_t newCanSpeed);
     uint32_t CurrentBaudRate();
+    void sleep();   // Put CAN controller into sleep mode for low power
+    void wake();    // Wake CAN controller from sleep mode
     #if PLATFORM_ID == PLATFORM_PHOTON_PRODUCTION   //When running on a board with a photon, we'll use the internal controller, no need to specify chip select pin
     void begin(unsigned long baudRate);
     #else                                           //When running on a P2 or other, we need the MCP2515, which has a chip select pin you must specify.

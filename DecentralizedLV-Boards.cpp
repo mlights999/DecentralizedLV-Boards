@@ -664,6 +664,16 @@ void CAN_Controller::CANSend(LV_CANMessage inputMessage){
     can.transmit(txMessage);
 }
 
+/// @brief Puts the CAN controller into sleep mode (Photon version - uses built-in CAN sleep)
+void CAN_Controller::sleep(){
+    can.sleep();
+}
+
+/// @brief Wakes the CAN controller from sleep mode (Photon version)
+void CAN_Controller::wake(){
+    can.begin(currentBaudRate);
+}
+
 #else
 
 /// @brief Initializes the MCP2515 CAN bus controller on the P2/other with the specified speed and chip select pin.
@@ -750,6 +760,18 @@ void CAN_Controller::CANSend(uint16_t Can_addr, byte data0, byte data1, byte dat
 void CAN_Controller::CANSend(LV_CANMessage inMsg){    //Implementation of CANSend on boards 
     byte data[8] = {inMsg.byte0, inMsg.byte1, inMsg.byte2, inMsg.byte3, inMsg.byte4, inMsg.byte5, inMsg.byte6, inMsg.byte7};
     CAN0->sendMsgBuf(inMsg.addr, 0, 8, data);
+}
+
+/// @brief Puts the MCP2515 CAN controller into sleep mode to save power. Call wake() to restore normal operation.
+void CAN_Controller::sleep(){
+    CAN0->setMode(MCP_SLEEP);  // MCP_SLEEP = 0x20
+    Serial.println("CAN controller entering sleep mode");
+}
+
+/// @brief Wakes the MCP2515 CAN controller from sleep mode and restores normal operation.
+void CAN_Controller::wake(){
+    CAN0->setMode(MCP_NORMAL); // MCP_NORMAL = 0x00
+    Serial.println("CAN controller waking from sleep mode");
 }
 
 #endif
