@@ -4,8 +4,14 @@
 #include <string>
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
 
+<<<<<<< Updated upstream
 // Forward declaration
 class PowerController_CAN;
+=======
+// Forward declarations
+class PowerController_CAN;
+class DashController_CAN;
+>>>>>>> Stashed changes
 
 class AppStatus {
 public:
@@ -45,6 +51,9 @@ public:
     bool j1772PlugState;
     uint8_t j1772ACCurrentLimit;
     uint8_t j1772ACVoltage;
+    
+    // Cell voltages array for toCellVoltagesJSON
+    float cellVoltages[180];  // Array to store individual cell voltages
 
     // RMSController fields
     uint16_t postFaultHigh;
@@ -64,6 +73,7 @@ public:
 
     // PowerController_CAN fields
     bool usingAppControl;
+<<<<<<< Updated upstream
 
     // Dashboard fields
     uint8_t DriveMode;
@@ -87,6 +97,30 @@ public:
     bool Ign_Current;
     bool FullStart_Current;
     uint8_t DriveMode_Current;
+=======
+
+    // Fields that the App can set
+    bool leftTurnSignal_App;
+    bool rightTurnSignal_App;
+    bool headlight_App;
+    bool highbeam_App;
+    bool horn_App;
+    bool stereo_App;         // Stereo state set by app (default ON)
+    bool ipadCharger_App;    // iPad charger state set by app (default ON)
+    bool Acc_App;
+    bool Ign_App;
+    bool FullStart_App;
+
+    // Actual current state (merged from manual and app controls)
+    bool leftTurnSignal_Current;
+    bool rightTurnSignal_Current;
+    bool headlight_Current;
+    bool highbeam_Current;
+    bool horn_Current;
+    bool stereo_Current;        // Current stereo state
+    bool ipadCharger_Current;   // Current iPad charger state
+    uint8_t DriveMode;          // Current drive mode
+>>>>>>> Stashed changes
 
     AppStatus();
 

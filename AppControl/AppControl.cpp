@@ -1,6 +1,10 @@
 #include "AppControl.h"
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
+<<<<<<< Updated upstream
 #include "../DecentralizedLV-Boards.h" // Include for PowerController_CAN
+=======
+#include "../DecentralizedLV-Boards.h" // Include for PowerController_CAN and DashController_CAN
+>>>>>>> Stashed changes
 
 AppStatus::AppStatus() :
     batterySOC(0),
@@ -36,6 +40,7 @@ AppStatus::AppStatus() :
     j1772PlugState(false),
     j1772ACCurrentLimit(0),
     j1772ACVoltage(0),
+<<<<<<< Updated upstream
     leftTurnSignal(false),
     rightTurnSignal(false),
     headlight(false),
@@ -53,6 +58,26 @@ AppStatus::AppStatus() :
     Ign_Current(false),
     FullStart_Current(false),
     DriveMode_Current(0),
+=======
+    leftTurnSignal_App(false),
+    rightTurnSignal_App(false),
+    headlight_App(false),
+    highbeam_App(false),
+    horn_App(false),
+    stereo_App(true),            //Default ON
+    ipadCharger_App(true),       //Default ON
+    Acc_App(false),
+    Ign_App(false),
+    FullStart_App(false),
+    leftTurnSignal_Current(false),
+    rightTurnSignal_Current(false),
+    headlight_Current(false),
+    highbeam_Current(false),
+    horn_Current(false),
+    stereo_Current(true),        //Default ON
+    ipadCharger_Current(true),   //Default ON
+    DriveMode(0),
+>>>>>>> Stashed changes
     postFaultHigh(0),
     postFaultLow(0),
     runFaultHigh(0),
@@ -66,9 +91,19 @@ AppStatus::AppStatus() :
     rmsInverterTemperatureC(0.0f),
     motorRPM(0),
     faultActive(false),
+<<<<<<< Updated upstream
     usingAppControl(false),
     DriveMode(0)
 {}
+=======
+    usingAppControl(false)
+{
+    // Initialize cell voltages array to 0
+    for(int i = 0; i < 180; i++) {
+        cellVoltages[i] = 0.0f;
+    }
+}
+>>>>>>> Stashed changes
 
 void AppStatus::copyFromPowerController(const PowerController_CAN& pc) {
     usingAppControl = pc.usingAppControl;
@@ -115,6 +150,14 @@ void AppStatus::copyFromOrionBMS(const OrionBMS& bms) {
     batterySOC = bms.packSOC;
 }
 
+void AppStatus::copyFromPowerController(const PowerController_CAN& pc) {
+    // Copy power controller state for app telemetry
+    usingAppControl = pc.usingAppControl;
+    Acc_App = pc.Acc;
+    Ign_App = pc.Ign;
+    FullStart_App = pc.FullStart;
+}
+
 void AppStatus::copyFromRMSController(const RMSController& rms) {
     postFaultHigh = rms.postFaultHigh;
     postFaultLow = rms.postFaultLow;
@@ -153,6 +196,7 @@ bool AppStatus::fromJSON(const std::string& json) {
     StaticJsonDocument<256> doc;
     DeserializationError err = deserializeJson(doc, json);
     if (err) return false;
+<<<<<<< Updated upstream
     // Note: These values get merged with hardware states in mergeControlStates
     // For now we just store them temporarily and let the merge happen in the main loop
     if (doc.containsKey("lts")) leftTurnSignal = doc["lts"];
@@ -165,6 +209,18 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("acc")) Acc = doc["acc"];
     if (doc.containsKey("ign")) Ign = doc["ign"];
     if (doc.containsKey("fs")) FullStart = doc["fs"];
+=======
+    if (doc.containsKey("lts")) leftTurnSignal_App = doc["lts"];
+    if (doc.containsKey("rts")) rightTurnSignal_App = doc["rts"];
+    if (doc.containsKey("hl")) headlight_App = doc["hl"];
+    if (doc.containsKey("hb")) highbeam_App = doc["hb"];
+    if (doc.containsKey("hn")) horn_App = doc["hn"];
+    if (doc.containsKey("st")) stereo_App = doc["st"];
+    if (doc.containsKey("ic")) ipadCharger_App = doc["ic"];
+    if (doc.containsKey("acc")) Acc_App = doc["acc"];
+    if (doc.containsKey("ign")) Ign_App = doc["ign"];
+    if (doc.containsKey("fs")) FullStart_App = doc["fs"];
+>>>>>>> Stashed changes
     return true;
 }
 
@@ -232,6 +288,7 @@ std::string AppStatus::toRMSJSON() const {
     return output;
 }
 
+<<<<<<< Updated upstream
 std::string AppStatus::toCellVoltagesJSON() const {
     // Create a JSON array with cell voltages
     // Note: This is a placeholder implementation - adjust based on actual cell voltage data source
@@ -240,11 +297,29 @@ std::string AppStatus::toCellVoltagesJSON() const {
     doc["hcv"] = highestCellVoltage;
     doc["lcv"] = lowestCellVoltage;
     doc["acv"] = avgCellVoltage;
+=======
+std::string AppStatus::toDashboardJSON() const {
+    StaticJsonDocument<256> doc;
+    doc["type"] = "dash";
+    // Send the actual current state (merged from manual and app controls)
+    doc["lts"] = leftTurnSignal_Current;
+    doc["rts"] = rightTurnSignal_Current;
+    doc["hl"] = headlight_Current;
+    doc["hb"] = highbeam_Current;
+    doc["hn"] = horn_Current;
+    doc["st"] = stereo_Current;
+    doc["ic"] = ipadCharger_Current;
+    doc["dm"] = DriveMode;  // Include drive mode so app can display gear
+    doc["acc"] = Acc_App;
+    doc["ign"] = Ign_App;
+    doc["fs"] = FullStart_App;
+>>>>>>> Stashed changes
     std::string output;
     serializeJson(doc, output);
     return output;
 }
 
+<<<<<<< Updated upstream
 std::string AppStatus::toDashboardJSON() const {
     StaticJsonDocument<256> doc;
     doc["type"] = "dash";
@@ -263,6 +338,27 @@ std::string AppStatus::toDashboardJSON() const {
     doc["ign"] = Ign_Current;
     doc["fs"] = FullStart_Current;
     doc["dm"] = DriveMode_Current;
+=======
+std::string AppStatus::toCellVoltagesJSON() const {
+    // Send a rotating batch of 36 cells each call
+    constexpr size_t kTotal = 180;
+    constexpr size_t kBatch = 36;
+    static size_t nextStart = 0; // rotates across calls
+
+    size_t start = nextStart;
+    nextStart = (nextStart + kBatch) % kTotal;
+
+    // Capacity: small object + array of 36 floats
+    const size_t cap = 512;
+    DynamicJsonDocument doc(cap);
+    doc["type"] = "cell";
+    doc["frstcll"] = static_cast<uint16_t>(start); // include first cell index
+    JsonArray arr = doc.createNestedArray("cv");
+    for (size_t i = 0; i < kBatch; ++i) {
+        size_t idx = (start + i) % kTotal;
+        arr.add(cellVoltages[idx]);
+    }
+>>>>>>> Stashed changes
     std::string output;
     serializeJson(doc, output);
     return output;

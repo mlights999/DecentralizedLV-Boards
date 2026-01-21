@@ -497,7 +497,11 @@ class AppController_CAN{
     bool Ign;                //Ignition state
     bool FullStart;          //Full start state (ready to drive)
     uint8_t driveMode;       //Current drive mode (park, reverse, drive, sport, eco, etc.)
+<<<<<<< Updated upstream
     bool boardDetected;      //Flag to ensure we have heard from the board
+=======
+    bool boardDetected;       //Flag to ensure we have heard from the board
+>>>>>>> Stashed changes
 
     AppController_CAN(uint32_t boardAddr);
     void initialize();
