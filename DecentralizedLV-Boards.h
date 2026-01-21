@@ -491,6 +491,8 @@ class AppController_CAN{
     bool highbeam;
     bool horn;
     bool hazards;            //Hazard lights state
+    bool stereo;             //Stereo power state (default ON)
+    bool ipadCharger;        //iPad/Cigarette lighter charger power state (default ON)
     bool Acc;                //Accessory state
     bool Ign;                //Ignition state
     bool FullStart;          //Full start state (ready to drive)

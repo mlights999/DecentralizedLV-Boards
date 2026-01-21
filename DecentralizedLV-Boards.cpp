@@ -293,6 +293,8 @@ void AppController_CAN::initialize() {
     highbeam = false;
     horn = false;
     hazards = false;
+    stereo = true;           //Default ON when flashed
+    ipadCharger = true;      //Default ON when flashed
     Acc = false;
     Ign = false;
     FullStart = false;
@@ -306,7 +308,9 @@ void AppController_CAN::sendCANData(CAN_Controller &controller) {
              | ((headlight ? 1 : 0) << 2)
              | ((highbeam ? 1 : 0) << 3)
              | ((horn ? 1 : 0) << 4)
-             | ((hazards ? 1 : 0) << 5);
+             | ((hazards ? 1 : 0) << 5)
+             | ((stereo ? 1 : 0) << 6)
+             | ((ipadCharger ? 1 : 0) << 7);
     byte tx1 = (Acc ? 1 : 0)
              | ((Ign ? 1 : 0) << 1)
              | ((FullStart ? 1 : 0) << 2);
@@ -323,6 +327,8 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         highbeam = (msg.byte0 >> 3) & 0x01;
         horn = (msg.byte0 >> 4) & 0x01;
         hazards = (msg.byte0 >> 5) & 0x01;
+        stereo = (msg.byte0 >> 6) & 0x01;
+        ipadCharger = (msg.byte0 >> 7) & 0x01;
         Acc = msg.byte1 & 0x01;
         Ign = (msg.byte1 >> 1) & 0x01;
         FullStart = (msg.byte1 >> 2) & 0x01;

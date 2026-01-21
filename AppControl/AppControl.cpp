@@ -42,6 +42,8 @@ AppStatus::AppStatus() :
     highbeam(false),
     horn(false),
     hazards(false),
+    stereo(true),            //Default ON
+    ipadCharger(true),       //Default ON
     leftTurnPWM(0),
     rightTurnPWM(0),
     Acc(false),
@@ -138,6 +140,8 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     highbeam = dc.highbeam || ac.highbeam;
     horn = ac.horn;  // Horn only comes from app controller (PowerController.Horn is separate)
     hazards = leftTurnSignal && rightTurnSignal;
+    stereo = ac.stereo;           // App controlled
+    ipadCharger = ac.ipadCharger; // App controlled
     leftTurnPWM = dc.leftTurnPWM;
     rightTurnPWM = dc.rightTurnPWM;
 }
@@ -156,6 +160,8 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("hl")) headlight = doc["hl"];
     if (doc.containsKey("hb")) highbeam = doc["hb"];
     if (doc.containsKey("hn")) horn = doc["hn"];
+    if (doc.containsKey("st")) stereo = doc["st"];
+    if (doc.containsKey("ic")) ipadCharger = doc["ic"];
     if (doc.containsKey("acc")) Acc = doc["acc"];
     if (doc.containsKey("ign")) Ign = doc["ign"];
     if (doc.containsKey("fs")) FullStart = doc["fs"];
@@ -249,6 +255,8 @@ std::string AppStatus::toDashboardJSON() const {
     doc["hb"] = highbeam;
     doc["hn"] = horn;
     doc["haz"] = hazards;
+    doc["st"] = stereo;
+    doc["ic"] = ipadCharger;
     doc["lts_pwm"] = leftTurnPWM;
     doc["rts_pwm"] = rightTurnPWM;
     doc["acc"] = Acc_Current;

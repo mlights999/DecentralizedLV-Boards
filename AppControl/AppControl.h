@@ -75,6 +75,8 @@ public:
     bool highbeam;           // True if either hardware or app has it on
     bool horn;               // True if either hardware or app has it on
     bool hazards;            // True if both turn signals are on
+    bool stereo;             // Stereo power state (controllable from app)
+    bool ipadCharger;        // iPad charger power state (controllable from app)
     uint8_t leftTurnPWM;     // PWM value for left turn signal
     uint8_t rightTurnPWM;    // PWM value for right turn signal
     bool Acc;
