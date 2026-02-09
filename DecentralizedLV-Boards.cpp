@@ -57,6 +57,9 @@ void DashController_CAN::initialize(){
     rightTurnPWM = 0;
     leftTurnPWM = 0;
     batteryFanPWM = 0;
+    frontLeftFan1PWM = 0; // Front-Left Fan 1 (HP1)
+    frontLeftFan2PWM = 0; // Front-Left Fan 2 (HP0)
+    frontRightFanPWM = 0; // Front-Right Fan (HP0)
     headlight = false;
     highbeam = false;
     reversePress = false;
@@ -70,29 +73,34 @@ void DashController_CAN::initialize(){
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
+/// Encodes new fan PWM values into CAN message bytes
 void DashController_CAN::sendCANData(CAN_Controller &controller){
-    byte tx2 = 0;
+    byte tx2 = frontLeftFan1PWM; // Front-Left Fan 1 PWM (byte 2)
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
-    byte tx5 = 0;
+    byte tx5 = frontLeftFan2PWM; // Front-Left Fan 2 PWM (byte 5)
     byte tx6 = driveMode;
-    byte tx7 = radiatorFan + (radiatorPump << 1);
+    byte tx7 = radiatorFan + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Front-Right Fan upper bits (bits 2-4 of byte 7)
     controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
 /// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
+/// Decondes new fan PWM values from CAN message bytes
 void DashController_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){   //Our message that we received was from this board. Go ahead and import the data to the packets.
         boardDetected = true;
         rightTurnPWM = msg.byte0;
         leftTurnPWM = msg.byte1;
+        frontLeftFan1PWM = msg.byte2; // Extract Front-Left Fan 1 from byte 2
         batteryFanPWM = msg.byte3;
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
+        frontLeftFan2PWM = msg.byte5; // Extract Front-Left Fan 2 from byte 5
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
+        frontRightFanPWM = ((msg.byte7 >> 2) & 0x07) << 5; // Extract Front-Right Fan from bits 2-4, shift back to full byte
     }
 }
 
