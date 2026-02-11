@@ -4,14 +4,9 @@
 #include <string>
 #include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
 
-<<<<<<< Updated upstream
-// Forward declaration
-class PowerController_CAN;
-=======
 // Forward declarations
 class PowerController_CAN;
 class DashController_CAN;
->>>>>>> Stashed changes
 
 class AppStatus {
 public:
@@ -73,31 +68,11 @@ public:
 
     // PowerController_CAN fields
     bool usingAppControl;
-<<<<<<< Updated upstream
-
-    // Dashboard fields
-    uint8_t DriveMode;
-
-    // Merged control fields (hardware OR software)
-    bool leftTurnSignal;     // True if either hardware or app has it on
-    bool rightTurnSignal;    // True if either hardware or app has it on
-    bool headlight;          // True if either hardware or app has it on
-    bool highbeam;           // True if either hardware or app has it on
-    bool horn;               // True if either hardware or app has it on
-    bool hazards;            // True if both turn signals are on
-    bool stereo;             // Stereo power state (controllable from app)
-    bool ipadCharger;        // iPad charger power state (controllable from app)
-    uint8_t leftTurnPWM;     // PWM value for left turn signal
-    uint8_t rightTurnPWM;    // PWM value for right turn signal
+    // Telemetry of PowerController state
     bool Acc;
     bool Ign;
     bool FullStart;
-
-    bool Acc_Current;
-    bool Ign_Current;
-    bool FullStart_Current;
-    uint8_t DriveMode_Current;
-=======
+    bool horn;
 
     // Fields that the App can set
     bool leftTurnSignal_App;
@@ -120,7 +95,6 @@ public:
     bool stereo_Current;        // Current stereo state
     bool ipadCharger_Current;   // Current iPad charger state
     uint8_t DriveMode;          // Current drive mode
->>>>>>> Stashed changes
 
     AppStatus();
 
@@ -128,6 +102,7 @@ public:
     void copyFromHVController(const HVController_CAN& hv);
     void copyFromOrionBMS(const OrionBMS& bms);
     void copyFromRMSController(const RMSController& rms);
+    void copyFromDashController(const DashController_CAN& dc);
     void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
 
     std::string toPowerControllerJSON() const;
