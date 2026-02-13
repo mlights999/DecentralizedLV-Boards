@@ -93,7 +93,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
-        frontLeftFan2PWM = msg.byte5; // Extract Front-Left Fan 2 from byte 5
+        frontLeftFanPWM = msg.byte5; // Extract Front-Left Fan  from byte 5
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
