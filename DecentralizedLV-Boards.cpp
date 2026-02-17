@@ -66,8 +66,7 @@ void DashController_CAN::initialize(){
     rmsFaultDetected = false;
     boardDetected = false;
     animationTick = 0;
-    frontLeftFanPWM = 0; // Front-Left Fan (HP1)
-    frontRightFanPWM = 0; // Front-Right Fan (HP0)
+    frontFansPWM = 0; // Front Fan (HP1)
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
@@ -75,9 +74,9 @@ void DashController_CAN::initialize(){
 void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx2 = animationTick;
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
-    byte tx5 = frontLeftFanPWM;
+    byte tx5 = frontFansPWM;
     byte tx6 = driveMode;
-    byte tx7 = radiatorFan + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Front-Right Fan upper bits (bits 2-4 of byte 7)
+    byte tx7 = radiatorFan + (radiatorPump << 1);
     controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
@@ -93,10 +92,12 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
-        frontLeftFanPWM = msg.byte5; // Extract Front-Left Fan  from byte 5
+        frontFansPWM = msg.byte5; 
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
+    
+
     }
 }
 

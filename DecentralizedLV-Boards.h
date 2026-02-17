@@ -327,8 +327,8 @@ class DashController_CAN{
     byte leftTurnPWM;           //Brightness of the left turn signal. Value ranges from 0 (fully off) to 255 (fully on).
     byte batteryFanPWM;         //Fan percentage for the battery box fan. Value ranges from 0 (fully off) to 255 (max speed).
     bool headlight;     
-    byte frontLeftFanPWM;
-    byte frontRightFanPWM;        //Toggle switch for the car headlights. True turns on headlights, false turns off headlights.
+    byte frontFansPWM;
+          //Toggle switch for the car headlights. True turns on headlights, false turns off headlights.
     bool highbeam;              //Toggle switch for the car highbeams. True turns on highbeams, false turns off highbeams.
     bool reversePress;          //Toggle switch for being in reverse mode. Use to turn on/off reverse lights, backup camera, etc.
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
