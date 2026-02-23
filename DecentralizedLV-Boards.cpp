@@ -76,8 +76,8 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
     byte tx5 = frontFansPWM;
     byte tx6 = driveMode;
-    byte tx7 = radiatorFan + (radiatorPump << 1);
-    controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
+    byte tx7 = radiatorFan + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2) + (wiperMotorEnabled << 2);  // ← Add wiper bit, Front-Right Fan upper bits (bits 2-4 of byte 7)
+    controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,sideIndicatorBrightness,tx6,tx7);   //Send out the main message to the corner boards
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
@@ -92,12 +92,12 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
-        frontFansPWM = msg.byte5; 
+        sideIndicatorBrightness = msg.byte5;  
+        frontLeftFanPWM = msg.byte5; // Extract Front-Left Fan  from byte 5
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
-    
-
+        wiperMotorEnabled = (msg.byte7 >> 2) & 1;  
     }
 }
 

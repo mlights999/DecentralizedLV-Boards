@@ -338,7 +338,8 @@ class DashController_CAN{
     bool rmsFaultDetected;      //Flag that is set true if a Motor Controller fault has been detected.
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Dash Controller has been received. Use this on other boards to check if you're hearing from the Dash Controller.
     uint8_t animationTick;      //A tick counter that is used to synchronize animations across the system. Increments every 10ms, resets to 0 after reaching 255.
-
+    uint8_t sideIndicatorBrightness;  
+    bool wiperMotorEnabled;           
     DashController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(CAN_Controller &controller);
