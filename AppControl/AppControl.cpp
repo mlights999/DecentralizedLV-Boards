@@ -67,7 +67,8 @@ AppStatus::AppStatus() :
     rmsInverterTemperatureC(0.0f),
     motorRPM(0),
     faultActive(false),
-    usingAppControl(false)
+    usingAppControl(false),
+    odometerMiles(0.0)
 {
     // Initialize cell voltages array to 0
     for(int i = 0; i < 180; i++) {
@@ -185,13 +186,14 @@ bool AppStatus::fromJSON(const std::string& json) {
 }
 
 std::string AppStatus::toPowerControllerJSON() const {
-    StaticJsonDocument<128> doc;
+    StaticJsonDocument<192> doc;
     doc["type"] = "pc";
     doc["acc"] = Acc;
     doc["ign"] = Ign;
     doc["fs"] = FullStart;
     doc["hn"] = horn_Current;
     doc["uac"] = usingAppControl;
+    doc["odo"] = (double)((long)(odometerMiles * 10)) / 10.0;  // miles, 1 decimal
     std::string output;
     serializeJson(doc, output);
     return output;
@@ -290,4 +292,32 @@ std::string AppStatus::toCellVoltagesJSON() const {
     std::string output;
     serializeJson(doc, output);
     return output;
+}
+
+/////////////////////////////////////////////////////////////////////
+//  Odometer – non-blocking speed integration
+//
+//  Converts motorRPM to vehicle speed using the same constant the
+//  app already uses (speed_mph = rpm / 68.5) and integrates over
+//  the elapsed time to accumulate distance in miles.
+//
+//  Call once per loop() pass.  Pure arithmetic – no I/O, no delay.
+/////////////////////////////////////////////////////////////////////
+
+/// @brief Integrates current motor RPM over a time delta to accumulate
+///        distance on the odometer.  Non-blocking (pure math).
+/// @param rpm      Current motor RPM (from RMSController via CAN)
+/// @param deltaMs  Milliseconds since the last call (e.g. millis() - prev)
+void AppStatus::updateOdometer(uint16_t rpm, uint32_t deltaMs) {
+    if (rpm == 0 || deltaMs == 0) return;           // stationary – nothing to add
+
+    // Speed conversion: same factor used by the app (PowerControllerBLE.ts)
+    //   speed_mph = rpm / 68.5
+    const double speedMph = static_cast<double>(rpm) / 68.5;
+
+    // distance = speed (mi/h) * time (h)
+    //          = speed * (deltaMs / 3,600,000)
+    const double distanceMiles = speedMph * (static_cast<double>(deltaMs) / 3600000.0);
+
+    odometerMiles += distanceMiles;
 }

@@ -96,6 +96,12 @@ public:
     bool ipadCharger_Current;   // Current iPad charger state
     uint8_t DriveMode;          // Current drive mode
 
+    // ── Odometer ──────────────────────────────────────────────────────────
+    //  Accumulated distance in miles, calculated from motorRPM.
+    //  Persists across power cycles via EEPROM (see PowerController.ino).
+    //  Resolution: ~0.001 mi. Sent to the app in the "pc" JSON packet.
+    double odometerMiles;
+
     AppStatus();
 
     void copyFromPowerController(const PowerController_CAN& pc);
@@ -110,6 +116,12 @@ public:
     std::string toDashboardJSON() const;
     std::string toRMSJSON() const;
     std::string toCellVoltagesJSON() const;
+
+    /// Update the odometer by integrating motorRPM over a time delta.
+    /// Call once per loop iteration.  Non-blocking; pure arithmetic.
+    /// @param rpm      Current motor RPM (from RMSController)
+    /// @param deltaMs  Milliseconds elapsed since the last call
+    void updateOdometer(uint16_t rpm, uint32_t deltaMs);
 
     bool fromJSON(const std::string& json);
 };
