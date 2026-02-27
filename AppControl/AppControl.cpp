@@ -114,6 +114,11 @@ void AppStatus::copyFromOrionBMS(const OrionBMS& bms) {
     j1772ACCurrentLimit = bms.j1772ACCurrentLimit;
     j1772ACVoltage = bms.j1772ACVoltage;
     batterySOC = bms.packSOC;
+    
+    // Copy per-cell voltages array
+    for (int i = 0; i < 180; i++) {
+        cellVoltages[i] = bms.cellVoltages[i];
+    }
 }
 
 void AppStatus::copyFromPowerController(const PowerController_CAN& pc) {
@@ -219,6 +224,8 @@ std::string AppStatus::toOrionBMSJSON() const {
     doc["bit"] = bmsInternalTempC;
     doc["thtc"] = thermistorHighTempC;
     doc["thlc"] = thermistorLowTempC;
+    doc["ht"] = thermistorHighTempC;    // Pack high temp (alias for app compatibility)
+    doc["lt"] = thermistorLowTempC;     // Pack low temp (alias for app compatibility)
     doc["rs"] = relayState;
     doc["jps"] = j1772PlugState;
     doc["jacl"] = j1772ACCurrentLimit;
