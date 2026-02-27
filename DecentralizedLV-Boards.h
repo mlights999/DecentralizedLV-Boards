@@ -326,9 +326,8 @@ class DashController_CAN{
     byte rightTurnPWM;          //Brightness of the right turn signal. Value ranges from 0 (fully off) to 255 (fully on).
     byte leftTurnPWM;           //Brightness of the left turn signal. Value ranges from 0 (fully off) to 255 (fully on).
     byte batteryFanPWM;         //Fan percentage for the battery box fan. Value ranges from 0 (fully off) to 255 (max speed).
-    bool headlight;     
-    byte frontFansPWM;
-          //Toggle switch for the car headlights. True turns on headlights, false turns off headlights.
+    byte frontRightFanPWM;
+    bool headlight;             //Toggle switch for the car headlights. True turns on headlights, false turns off headlights.
     bool highbeam;              //Toggle switch for the car highbeams. True turns on highbeams, false turns off highbeams.
     bool reversePress;          //Toggle switch for being in reverse mode. Use to turn on/off reverse lights, backup camera, etc.
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
@@ -338,8 +337,8 @@ class DashController_CAN{
     bool rmsFaultDetected;      //Flag that is set true if a Motor Controller fault has been detected.
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Dash Controller has been received. Use this on other boards to check if you're hearing from the Dash Controller.
     uint8_t animationTick;      //A tick counter that is used to synchronize animations across the system. Increments every 10ms, resets to 0 after reaching 255.
-    uint8_t sideIndicatorBrightness;  
-    bool wiperMotorEnabled;           
+    uint8_t sideIndicatorBrightness; //0-255 brightness
+
     DashController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(CAN_Controller &controller);
@@ -493,13 +492,6 @@ class AppController_CAN{
     bool headlight;
     bool highbeam;
     bool horn;
-    bool hazards;            //Hazard lights state
-    bool stereo;             //Stereo power state (default ON)
-    bool ipadCharger;        //iPad/Cigarette lighter charger power state (default ON)
-    bool Acc;                //Accessory state
-    bool Ign;                //Ignition state
-    bool FullStart;          //Full start state (ready to drive)
-    uint8_t driveMode;       //Current drive mode (park, reverse, drive, sport, eco, etc.)
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);
