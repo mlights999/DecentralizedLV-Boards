@@ -80,7 +80,11 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx6 = driveMode;
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     byte tx7 = radiatorFan + (radiatorPump << 1) + (frontRightFanPWM << 2);
+=======
+    byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
+>>>>>>> Stashed changes
 =======
     byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
 >>>>>>> Stashed changes
@@ -109,6 +113,9 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         sideIndicatorBrightness = msg.byte5;  
         frontFansPWM = msg.byte5; // Extract Front Fans PWM from byte 5
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
