@@ -78,7 +78,11 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
     byte tx5 = sideIndicatorBrightness;
     byte tx6 = driveMode;
+<<<<<<< Updated upstream
     byte tx7 = radiatorFan + (radiatorPump << 1) + (frontRightFanPWM << 2);
+=======
+    byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
+>>>>>>> Stashed changes
     controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
@@ -95,7 +99,12 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
+<<<<<<< Updated upstream
         sideIndicatorBrightness = msg.byte5;
+=======
+        sideIndicatorBrightness = msg.byte5;  
+        frontFansPWM = msg.byte5; // Extract Front Fans PWM from byte 5
+>>>>>>> Stashed changes
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
@@ -723,7 +732,7 @@ void CAN_Controller::begin(unsigned long baudRate, uint8_t chipSelectPin){
     csPin = chipSelectPin;
     currentBaudRate = convertBaudRateToMCP(baudRate);
     CAN0 = new MCP_CAN(chipSelectPin);
-    Serial.printlnf("Begin at %d", currentBaudRate);
+    Serial.printlnf("Begin at %lu", currentBaudRate);
     CAN0->begin(MCP_STDEXT, currentBaudRate, MCP_8MHZ);
     CAN0->setMode(MCP_NORMAL);
     SPI.setClockSpeed(8000000);
@@ -748,8 +757,7 @@ void CAN_Controller::addFilter(uint32_t address){
 /// @param outputMessage CAN bus message that will be returned by the CAN controller (returns reference). 
 /// @return Boolean indicating whether or not a message was received from the CAN bus
 bool CAN_Controller::receive(LV_CANMessage &outputMessage){
-    bool receivedMessage = CAN0->checkReceive();
-    if(!receivedMessage) return receivedMessage;
+    if(CAN0->checkReceive() != CAN_MSGAVAIL) return false;  // CAN_MSGAVAIL=3, CAN_NOMSG=4; both are truthy so bool cast was broken
     uint32_t rxId = 0;
     unsigned char len = 0;
     unsigned char rxBuf[8];

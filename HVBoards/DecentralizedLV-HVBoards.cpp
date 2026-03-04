@@ -271,8 +271,15 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
     //Serial.printlnf("Found BMS ID: %X", msg.addr);
     uint8_t data[8] = {msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7};
     bms->second->unpack(data, msg.addr);
-    return;
   }
+  else
+  {
+    return;  // Message not in the BMS CAN map – nothing to do
+  }
+
+  // Decode the latest struct values into the class member variables.
+  // Each call only updates one DBC struct, but decoding all is cheap and
+  // keeps every field fresh with the most recent data.
 
   // BMS pack statistics
   double packTemp = dbc_bms_msgid_0_x6_b0.pack_current_decode();                 //2 bytes
@@ -454,8 +461,15 @@ void RMSController::receiveHVCANData(LV_CANMessage msg)
     // Conversion from LV_CANMessage to uint8_t array for unpacking
     uint8_t data[8] = {msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7};
     rms->second->unpack(data, msg.addr);
-    return;
   }
+  else
+  {
+    return;  // Message not in the RMS CAN map – nothing to do
+  }
+
+  // Decode the latest struct values into the class member variables.
+  // Each call only updates one DBC struct, but decoding all is cheap and
+  // keeps every field fresh with the most recent data.
 
   //RMS Voltages and Currents
   accessoryVoltage = (float)dbc_rms_m169_internal_voltages.d4_reference_voltage_12_0_decode();            // 2 bytes
