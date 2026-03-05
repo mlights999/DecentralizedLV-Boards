@@ -78,23 +78,7 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
     byte tx5 = sideIndicatorBrightness;
     byte tx6 = driveMode;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     byte tx7 = radiatorFan + (radiatorPump << 1) + (frontRightFanPWM << 2);
-=======
-    byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
->>>>>>> Stashed changes
-=======
-    byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
->>>>>>> Stashed changes
-=======
-    byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
->>>>>>> Stashed changes
-=======
-    byte tx7 = radiatorFan + (radiatorPump << 1) + (wiperMotorEnabled << 2);
->>>>>>> Stashed changes
     controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
@@ -111,21 +95,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
-<<<<<<< Updated upstream
         sideIndicatorBrightness = msg.byte5;
-=======
-        sideIndicatorBrightness = msg.byte5;  
-        frontFansPWM = msg.byte5; // Extract Front Fans PWM from byte 5
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
@@ -328,6 +298,13 @@ void AppController_CAN::initialize() {
     headlight = false;
     highbeam = false;
     horn = false;
+    hazards = false;
+    stereo = true;           //Default ON when flashed
+    ipadCharger = true;      //Default ON when flashed
+    Acc = false;
+    Ign = false;
+    FullStart = false;
+    driveMode = 0;
     boardDetected = false;
 }
 
@@ -336,8 +313,15 @@ void AppController_CAN::sendCANData(CAN_Controller &controller) {
              | ((rightTurnSignal ? 1 : 0) << 1)
              | ((headlight ? 1 : 0) << 2)
              | ((highbeam ? 1 : 0) << 3)
-             | ((horn ? 1 : 0) << 4);
-    controller.CANSend(boardAddress, tx0, usingAppControl, 0, 0, 0, 0, 0, 0);
+             | ((horn ? 1 : 0) << 4)
+             | ((hazards ? 1 : 0) << 5)
+             | ((stereo ? 1 : 0) << 6)
+             | ((ipadCharger ? 1 : 0) << 7);
+    byte tx1 = (Acc ? 1 : 0)
+             | ((Ign ? 1 : 0) << 1)
+             | ((FullStart ? 1 : 0) << 2);
+    byte tx2 = driveMode;
+    controller.CANSend(boardAddress, tx0, tx1, tx2, usingAppControl, 0, 0, 0, 0);
 }
 
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
@@ -348,7 +332,14 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         headlight = (msg.byte0 >> 2) & 0x01;
         highbeam = (msg.byte0 >> 3) & 0x01;
         horn = (msg.byte0 >> 4) & 0x01;
-        usingAppControl = msg.byte1 & 0x01;  // Extract the usingAppControl flag from byte1
+        hazards = (msg.byte0 >> 5) & 0x01;
+        stereo = (msg.byte0 >> 6) & 0x01;
+        ipadCharger = (msg.byte0 >> 7) & 0x01;
+        Acc = msg.byte1 & 0x01;
+        Ign = (msg.byte1 >> 1) & 0x01;
+        FullStart = (msg.byte1 >> 2) & 0x01;
+        driveMode = msg.byte2;
+        usingAppControl = msg.byte3 & 0x01;  // Extract the usingAppControl flag from byte3
     }
 }
 

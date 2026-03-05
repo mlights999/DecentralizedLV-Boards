@@ -492,6 +492,13 @@ class AppController_CAN{
     bool headlight;
     bool highbeam;
     bool horn;
+    bool hazards;            //Hazard lights state
+    bool stereo;             //Stereo power state (default ON)
+    bool ipadCharger;        //iPad/Cigarette lighter charger power state (default ON)
+    bool Acc;                //Accessory state
+    bool Ign;                //Ignition state
+    bool FullStart;          //Full start state (ready to drive)
+    uint8_t driveMode;       //Current drive mode (park, reverse, drive, sport, eco, etc.)
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);
