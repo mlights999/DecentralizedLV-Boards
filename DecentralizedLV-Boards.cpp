@@ -91,7 +91,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         rightTurnPWM = msg.byte0;
         leftTurnPWM = msg.byte1;
         animationTick = msg.byte2;
-        batteryFanPWM = msg.byte3;
+        batteryFanPWM = msg.byte3; //not being use, we have frontFans for this
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
