@@ -56,7 +56,7 @@ void DashController_CAN::initialize(){
     rightTurnPWM = 0;
     leftTurnPWM = 0;
     batteryFanPWM = 0;
-    frontRightFanPWM = 0; // Front-Right Fan (HP0)
+    frontFansPWM = 0; // Front-Right Fan (HP0)
     headlight = false;
     highbeam = false;
     reversePress = false;
@@ -78,7 +78,7 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
     byte tx5 = sideIndicatorBrightness;
     byte tx6 = driveMode;
-    byte tx7 = radiatorFan + (radiatorPump << 1) + (frontRightFanPWM << 2);
+    byte tx7 = radiatorFan + (radiatorPump << 1) + (frontFansPWM << 2);
     controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
@@ -99,7 +99,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         driveMode = msg.byte6;
         radiatorFan = msg.byte7 & 1;
         radiatorPump = (msg.byte7 >> 1) & 1;
-        frontRightFanPWM = (msg.byte7 >> 2) & 1;
+        frontFansPWM = (msg.byte7 >> 2) & 1;
     }
 }
 
