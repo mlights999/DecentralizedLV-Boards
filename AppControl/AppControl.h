@@ -112,7 +112,8 @@ public:
     void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
 
     std::string toPowerControllerJSON() const;
-    std::string toOrionBMSJSON() const;
+    std::string toOrionBMSJSON_1() const;  // Core electrical: pca, piv, isv, acv, hcv, lcv, pah, pro, lcro, soc
+    std::string toOrionBMSJSON_2() const;  // Flags, limits, temps, relay: dtc1/2, dcl, ccl, temps, J1772
     std::string toDashboardJSON() const;
     std::string toRMSJSON() const;
     std::string toCellVoltagesJSON() const;

@@ -204,33 +204,45 @@ std::string AppStatus::toPowerControllerJSON() const {
     return output;
 }
 
-std::string AppStatus::toOrionBMSJSON() const {
-    StaticJsonDocument<512> doc;
-    doc["type"] = "bms";
-    doc["pca"] = packCurrentAmps;
-    doc["piv"] = packInstantaneousVoltage;
-    doc["isv"] = inputSupplyVoltage;
-    doc["acv"] = avgCellVoltage;
-    doc["hcv"] = highestCellVoltage;
-    doc["lcv"] = lowestCellVoltage;
-    doc["pah"] = packAmpHours;
-    doc["pro"] = packResistanceOhms;
+// Split into two smaller packets so Bluetooth 4.0 devices (small ATT MTU) can receive them.
+// bms  (type="bms") : all display-critical fields the app already knows how to parse (~155 B)
+// bms2 (type="bms2"): supplemental diagnostic fields for future app support (~145 B)
+
+std::string AppStatus::toOrionBMSJSON_1() const {
+    StaticJsonDocument<320> doc;
+    doc["type"] = "bms";   // Keep as "bms" so the existing app parses it without changes
+    doc["soc"]  = batterySOC;
+    doc["pca"]  = packCurrentAmps;
+    doc["piv"]  = packInstantaneousVoltage;
+    doc["acv"]  = avgCellVoltage;
+    doc["hcv"]  = highestCellVoltage;
+    doc["lcv"]  = lowestCellVoltage;
+    doc["pah"]  = packAmpHours;
+    doc["ht"]   = thermistorHighTempC;   // Pack high temp
+    doc["lt"]   = thermistorLowTempC;    // Pack low temp
+    doc["bat"]  = bmsAverageTempC;
+    doc["bit"]  = bmsInternalTempC;
+    std::string output;
+    serializeJson(doc, output);
+    return output;
+}
+
+std::string AppStatus::toOrionBMSJSON_2() const {
+    StaticJsonDocument<320> doc;
+    doc["type"] = "bms";   // Same type as bms1 — app merges fields from both packets
+    doc["isv"]  = inputSupplyVoltage;
+    doc["pro"]  = packResistanceOhms;
     doc["lcro"] = lowestCellResistanceOhms;
-    doc["dtc1"] = dtcFlags1;
-    doc["dtc2"] = dtcFlags2;
-    doc["dcl"] = dischargeCurrentLimit;
-    doc["ccl"] = chargeCurrentLimit;
-    doc["bat"] = bmsAverageTempC;
-    doc["bit"] = bmsInternalTempC;
     doc["thtc"] = thermistorHighTempC;
     doc["thlc"] = thermistorLowTempC;
-    doc["ht"] = thermistorHighTempC;    // Pack high temp (alias for app compatibility)
-    doc["lt"] = thermistorLowTempC;     // Pack low temp (alias for app compatibility)
-    doc["rs"] = relayState;
-    doc["jps"] = j1772PlugState;
+    doc["dtc1"] = dtcFlags1;
+    doc["dtc2"] = dtcFlags2;
+    doc["dcl"]  = dischargeCurrentLimit;
+    doc["ccl"]  = chargeCurrentLimit;
+    doc["rs"]   = relayState;
+    doc["jps"]  = j1772PlugState;
     doc["jacl"] = j1772ACCurrentLimit;
-    doc["jav"] = j1772ACVoltage;
-    doc["soc"] = batterySOC;
+    doc["jav"]  = j1772ACVoltage;
     std::string output;
     serializeJson(doc, output);
     return output;
@@ -278,17 +290,16 @@ std::string AppStatus::toDashboardJSON() const {
 }
 
 std::string AppStatus::toCellVoltagesJSON() const {
-    // Send a rotating batch of 36 cells each call
+    // Send a rotating batch of 18 cells each call (reduced from 36 for Bluetooth 4.0 MTU compatibility)
     constexpr size_t kTotal = 180;
-    constexpr size_t kBatch = 36;
+    constexpr size_t kBatch = 18;
     static size_t nextStart = 0; // rotates across calls
 
     size_t start = nextStart;
     nextStart = (nextStart + kBatch) % kTotal;
 
-    // Capacity: small object + array of 36 floats
-    const size_t cap = 512;
-    DynamicJsonDocument doc(cap);
+    // Capacity: small object + array of 18 floats (~140 bytes serialized)
+    StaticJsonDocument<320> doc;
     doc["type"] = "cell";
     doc["frstcll"] = static_cast<uint16_t>(start); // include first cell index
     JsonArray arr = doc.createNestedArray("cv");
