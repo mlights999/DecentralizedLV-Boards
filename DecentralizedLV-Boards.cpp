@@ -270,7 +270,9 @@ void IBOOSTER_CAN::initialize(){
 void IBOOSTER_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
-
+        //Reece: fully pressed my ass. this needs to be fixed. maybe monitor when brakes are being fully pressed by if it is zero and the number was increasing? further testing is needed. 
+        static int brakeMin = 0x50;
+        static int brakeMax = 0xC0;
         //msg.byte5 ranges from 0x50 (fully released) to 0xC0 (fully pressed)
         static int brakeMin = 0x50;
         static int brakeMax = 0xC0;
