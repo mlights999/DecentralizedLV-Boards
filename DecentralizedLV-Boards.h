@@ -107,12 +107,11 @@
 #define DASH_CONTROL_ADDR   0x99
 // byte 0: Right Turn PWM 0-255
 // byte 1: Left Turn PWM 0-255
-// byte 2: 
-// byte 3: HV Battery Fan PWM 0-255
+// byte 2: animationTick 
 // byte 4: b0:headlight b1:highbeam b5:reversePress
-// byte 5: 
+// byte 5: Radiator Fan PWM 0-255
 // byte 6: Drive Mode: b0: Drive, b1: Sport, b2: Eco, b3: Reverse, b4: Neutral (BPS fault)
-// byte 7: b0: Radiator Fan, b1: Radiator pump
+// byte 7: Radiator pump
 // EXAMPLE FRAME: CANSend(0x99, 0xFF, 0xFF, 0x00, 0xFF, 0x03, 0x00, 0x01, 0x03);
 // - Right and Left turn signal, headlight, and highbeam are on (at full brightness for L and R signal)
 // - Car is not in low power mode, not doing startup animations
@@ -326,18 +325,16 @@ class DashController_CAN{
     byte rightTurnPWM;          //Brightness of the right turn signal. Value ranges from 0 (fully off) to 255 (fully on).
     byte leftTurnPWM;           //Brightness of the left turn signal. Value ranges from 0 (fully off) to 255 (fully on).
     byte batteryFanPWM;         //Fan percentage for the battery box fan. Value ranges from 0 (fully off) to 255 (max speed).
-    byte frontFansPWM;
     bool headlight;             //Toggle switch for the car headlights. True turns on headlights, false turns off headlights.
     bool highbeam;              //Toggle switch for the car highbeams. True turns on highbeams, false turns off highbeams.
     bool reversePress;          //Toggle switch for being in reverse mode. Use to turn on/off reverse lights, backup camera, etc.
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
-    bool radiatorFan;           //Toggle to control the cooling fan for the motor controller.
+    byte radiatorFanPWM;           //Toggle to control the cooling fan for the motor controller.
     bool radiatorPump;          //Toggle to control the cooling pump for the motor controller.
     bool bmsFaultDetected;      //Flag that is set true if a Battery Management System fault has been detected.
     bool rmsFaultDetected;      //Flag that is set true if a Motor Controller fault has been detected.
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Dash Controller has been received. Use this on other boards to check if you're hearing from the Dash Controller.
     uint8_t animationTick;      //A tick counter that is used to synchronize animations across the system. Increments every 10ms, resets to 0 after reaching 255.
-    uint8_t sideIndicatorBrightness; //0-255 brightness
 
     DashController_CAN(uint32_t boardAddr);
     void initialize();
