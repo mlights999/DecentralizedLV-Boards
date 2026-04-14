@@ -151,9 +151,9 @@ void AppStatus::copyFromDashController(const DashController_CAN& dc) {
     rightTurnSignal_Current = (dc.rightTurnPWM > 0);
     headlight_Current = dc.headlight;
     highbeam_Current = dc.highbeam;
-    // Update fault indicators reported by the dash
-    BMSFault = dc.bmsFaultDetected;
-    faultActive = dc.rmsFaultDetected;
+    // Merge dash fault indicators with authoritative HV/RMS sources (FIX: was overwriting with =)
+    BMSFault = BMSFault || dc.bmsFaultDetected;
+    faultActive = faultActive || dc.rmsFaultDetected;
     DriveMode = dc.driveMode;
 }
 
@@ -164,7 +164,7 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     rightTurnSignal_Current = (dc.rightTurnPWM > 0) || ac.rightTurnSignal;
     headlight_Current = dc.headlight || ac.headlight;
     highbeam_Current = dc.highbeam || ac.highbeam;
-    horn_Current = ac.horn || horn_Current;
+    horn_Current = ac.horn || horn;  //FIX: was horn_Current (self-reference, latched on forever). Use hardware horn state from PowerController.
     stereo_Current = ac.stereo;           // App controlled
     ipadCharger_Current = ac.ipadCharger; // App controlled
     DriveMode = dc.driveMode;
@@ -229,7 +229,7 @@ std::string AppStatus::toOrionBMSJSON_1() const {
 
 std::string AppStatus::toOrionBMSJSON_2() const {
     StaticJsonDocument<320> doc;
-    doc["type"] = "bms";   // Same type as bms1 — app merges fields from both packets
+    doc["type"] = "bms2";  //FIX: was "bms" (same as packet 1). Changed to "bms2" so app can distinguish the two packets.
     doc["isv"]  = inputSupplyVoltage;
     doc["pro"]  = packResistanceOhms;
     doc["lcro"] = lowestCellResistanceOhms;
@@ -281,9 +281,9 @@ std::string AppStatus::toDashboardJSON() const {
     doc["st"] = stereo_Current;
     doc["ic"] = ipadCharger_Current;
     doc["dm"] = DriveMode;  // Include drive mode so app can display gear
-    doc["acc"] = Acc_App;
-    doc["ign"] = Ign_App;
-    doc["fs"] = FullStart_App;
+    doc["acc"] = Acc;       //FIX: was Acc_App (echoed app command). Now sends actual hardware state.
+    doc["ign"] = Ign;       //FIX: was Ign_App
+    doc["fs"] = FullStart;  //FIX: was FullStart_App
     std::string output;
     serializeJson(doc, output);
     return output;

@@ -3,8 +3,7 @@
 #include "map"
 
 
-std::vector<float> cell_telemetry(105);
-unsigned int cell_telemetry_counter = 0;
+//Removed: dead globals cell_telemetry(105) and cell_telemetry_counter — unused, wasted ~420 bytes of heap
 
 OrionBMS::OrionBMS(uint32_t packStatsAddress, uint32_t cellStatsDTCAddress, uint32_t currentLimitTempAddress, uint32_t j1772Address)
 {
@@ -270,7 +269,7 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
     // Conversion from LV_CANMessage to uint8_t array for unpacking
     //Serial.printlnf("Found BMS ID: %X", msg.addr);
     uint8_t data[8] = {msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7};
-    bms->second->unpack(data, msg.addr);
+    bms->second->unpack(data, 8u);  //FIX: pass buffer size (8 bytes), not CAN ID
   }
   else
   {
@@ -315,9 +314,10 @@ void OrionBMS::receiveHVCANData(LV_CANMessage msg)
   j1772PlugState = (bool)dbc_bms_msgid_0_x6_b3.j1772_plug_state_decode();               //1 bit
   j1772ACCurrentLimit = (uint8_t)dbc_bms_msgid_0_x6_b3.j1772_ac_current_limit_decode(); //1 byte
   j1772ACVoltage = (uint8_t)dbc_bms_msgid_0_x6_b5.j1772_ac_voltage_decode();            //1 byte
-  packRawAmps = (uint16_t)packTemp;
+  packRawAmps = (uint16_t)dbc_bms_msgid_0_x6_b0.pack_current;  //FIX: store raw uint16 from DBC struct, not the decoded double
 
-  if(packTemp >= 3276.8) packCurrentAmps = (float)(0.0 - (6553.5 - packTemp));
+  //FIX: corrected two's complement conversion — was: 0.0-(6553.5-packTemp) which gives 0 at max negative
+  if(packTemp >= 3276.8) packCurrentAmps = (float)(packTemp - 6553.6);
   else packCurrentAmps = (float)packTemp;
 }
 
@@ -365,8 +365,8 @@ void RMSController::sendPowerStats(CAN_Controller &controller)
 void RMSController::sendMotorTemp(CAN_Controller &controller)
 {
   uint16_t motorRPMTemp = (uint16_t)motorRPM;                                //Motor RPM is already in 1 RPM increments
-  uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
-  uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
+  int16_t motorTemperatureTemp = (int16_t)(motorTemperatureC * 10);          //FIX: signed to preserve negative temps (was uint16_t)
+  int16_t inverterTemperatureTemp = (int16_t)(inverterTemperatureC * 10);    //FIX: signed to preserve negative temps (was uint16_t)
   uint16_t commandedTorqueTemp = (uint16_t)(commandedTorque * 10);           //Convert to 0.1Nm increments
 
   controller.CANSend(motorTempAddr, 
@@ -414,8 +414,8 @@ void RMSController::receiveMotorTemp(LV_CANMessage msg)
   if (msg.addr != motorTempAddr) return; //Ignore messages not meant for this address
 
   uint16_t motorRPMTemp = (uint16_t)(msg.byte0 << 8 | msg.byte1);                    //Motor RPM is already in 1 RPM increments
-  uint16_t motorTemperatureTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);            //Convert to 0.1C increments
-  uint16_t inverterTemperatureTemp = (uint16_t)(msg.byte4 << 8 | msg.byte5);          //Convert to 0.1C increments
+  int16_t motorTemperatureTemp = (int16_t)(msg.byte2 << 8 | msg.byte3);              //FIX: signed to match sender (was uint16_t, negative temps decoded as ~6500C)
+  int16_t inverterTemperatureTemp = (int16_t)(msg.byte4 << 8 | msg.byte5);            //FIX: signed to match sender (was uint16_t)
   uint16_t commandedTorqueTemp = (uint16_t)(msg.byte6 << 8 | msg.byte7);             //Convert to 0.1Nm increments
 
   motorRPM = (uint16_t)motorRPMTemp;                                                 //Motor RPM is already in 1 RPM increments
@@ -460,7 +460,7 @@ void RMSController::receiveHVCANData(LV_CANMessage msg)
     // The unpack will automatically feed the message into the appropriate struct for parsing the data
     // Conversion from LV_CANMessage to uint8_t array for unpacking
     uint8_t data[8] = {msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7};
-    rms->second->unpack(data, msg.addr);
+    rms->second->unpack(data, 8u);  //FIX: pass buffer size (8 bytes), not CAN ID
   }
   else
   {
@@ -493,5 +493,5 @@ void RMSController::receiveHVCANData(LV_CANMessage msg)
   //teleP->rms_motor_speed = (float)dbc_rms_m176_fast_info.fast_motor_speed_decode();
   //Serial.println(teleP->rms_motor_speed);
 
-  faultActive = (runFaultLow > 0) || (postFaultLow > 0) || (postFaultHigh > 0); //Set the faultActive flag if any of the fault codes are non-zero
+  faultActive = (runFaultLow > 0) || (runFaultHigh > 0) || (postFaultLow > 0) || (postFaultHigh > 0); //FIX: added runFaultHigh — was missing, could miss active RMS faults
 }

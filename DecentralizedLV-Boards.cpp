@@ -127,8 +127,8 @@ void HVController_CAN::initialize(){
 /// @param controller The CAN bus controller attached to this microcontroller.
 void HVController_CAN::sendCANData(CAN_Controller &controller){
     byte tx0 = Killswitch + (BMSFault << 1) + (dischargeContactorOn << 2) + (chargeContactorOn << 3) + (chargeSafetyOn << 4);
-    uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
-    uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
+    int16_t motorTemperatureTemp = (int16_t)(motorTemperatureC * 10);            //FIX: signed to preserve negative temps (was uint16_t — UB for negative floats)
+    int16_t inverterTemperatureTemp = (int16_t)(inverterTemperatureC * 10);    //FIX: signed to preserve negative temps (was uint16_t)
     controller.CANSend(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, 0);
 
 }
@@ -146,8 +146,8 @@ void HVController_CAN::receiveCANData(LV_CANMessage msg){
         chargeSafetyOn = (msg.byte0 >> 4) & 1;
         packSOC = msg.byte1;
 
-        uint16_t motorTemperatureTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);            //Convert to 0.1C increments
-        uint16_t inverterTemperatureTemp = (uint16_t)(msg.byte4 << 8 | msg.byte5);            //Convert to 0.1C increments
+        int16_t motorTemperatureTemp = (int16_t)(msg.byte2 << 8 | msg.byte3);              //Signed: temperatures can be negative (FIX: was uint16_t)
+        int16_t inverterTemperatureTemp = (int16_t)(msg.byte4 << 8 | msg.byte5);            //Signed: temperatures can be negative (FIX: was uint16_t)
         motorTemperatureC = (float)(motorTemperatureTemp / 10.0);                          //Convert to degrees C
         inverterTemperatureC = (float)(inverterTemperatureTemp / 10.0);                       //Convert to degrees C
 
@@ -242,7 +242,7 @@ void LPDRV_RearLeft_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
         bmsFaultInput = msg.byte0 & 1;  //Extract BMS fault from the first bit of byte 0
-        bmsFaultInput = msg.byte1 & 1;  //Extract BMS fault from the first bit of byte 1
+        switchFaultInput = msg.byte1 & 1;  //Extract kill switch fault from byte 1 (was: bmsFaultInput — copy-paste bug)
     }
 }
 
@@ -484,11 +484,11 @@ void CamryCluster_CAN::send1000msPackets(CAN_Controller &controller){
     if(!clusterBacklight) engineFault = checkEngineOn ? 0xB0:0xC0;    //Turn off backlight if needed
 
     uint8_t dashAnimationMask = animateStartup ? 0x00:0x40;
-    dashAnimationMask += trunkOpen + (rearLeftDoor << 2) + (rearRightDoor << 3) + (frontRightDoor << 4) + (frontLeftDoor << 5);
+    dashAnimationMask |= trunkOpen | (rearLeftDoor << 2) | (rearRightDoor << 3) | (frontRightDoor << 4) | (frontLeftDoor << 5);  //FIX: was +=, carry could corrupt animateStartup at bit 6
 
     uint8_t precollisionMask = crashBrakePrompt ? 0x10 : 0x00;
 
-    uint8_t hudLaneMask = hudBlueLeftLane + (hudBlueRightLane << 1) + ((hudLeftLaneColor && 0x3) << 2) + ((hudRightLaneColor && 0x3) << 4);
+    uint8_t hudLaneMask = hudBlueLeftLane + (hudBlueRightLane << 1) + ((hudLeftLaneColor & 0x3) << 2) + ((hudRightLaneColor & 0x3) << 4);  //FIX: was && (logical), must be & (bitwise) to preserve 2-bit color value
 
     //Allow for instant update if values have changed for the headlight or highbeam
     if(headlight != last_headlight || highbeam != last_highbeam){
@@ -508,7 +508,8 @@ void CamryCluster_CAN::send1000msPackets(CAN_Controller &controller){
     static uint8_t lastLowACC;
     static uint16_t lastMotorTemp;
     if(lastEngineFault != engineFault || lastLowACC != lowACC || lastMotorTemp != motorTempDegC){
-        controller.CANSend(ENGINE_CONTROL_CAN_ADDR, engineFault,lowACC,(motorTempDegC*1.59)+65,0,0,0,0,0);      //Spoof for engine controller. Takes a flag that sets check engine, alternator failure and motor temperature
+        { uint8_t motorTempByte = (uint8_t)min((int)255, (int)((motorTempDegC*1.59)+65));  //FIX: clamp to 255 to prevent byte overflow above ~120C
+        controller.CANSend(ENGINE_CONTROL_CAN_ADDR, engineFault,lowACC,motorTempByte,0,0,0,0,0); }     //Spoof for engine controller
         lastEngineFault = engineFault;
         lastLowACC = lowACC;
         lastMotorTemp = motorTempDegC;
@@ -539,7 +540,8 @@ void CamryCluster_CAN::send1000msPackets(CAN_Controller &controller){
     controller.CANSend(PRECOLLISION_CAN_ADDR, precollisionMask, 0, 0, clusterBeeps, 0, 0, 0, 0);            //Precollision spoof
     controller.CANSend(PARKING_CAN_ADDR, 1, 1, 1, 1, 0, 0, 0, 0);                                           //Parking sonar spoof
     controller.CANSend(LIGHTING_CAN_ADDR, 0x12, 0, 0xE8,(headlight << 5) + (highbeam << 6), 0, 0, 0, 0);    //Send out spoof for headlights/high beam system when headlight switches have changed
-    controller.CANSend(ENGINE_CONTROL_CAN_ADDR, engineFault,lowACC,(motorTempDegC*1.59)+65,0,0,0,0,0);      //Spoof for engine controller. Takes a flag that sets check engine, alternator failure and motor temperature
+    { uint8_t motorTempByte = (uint8_t)min((int)255, (int)((motorTempDegC*1.59)+65));  //FIX: clamp to prevent byte overflow
+    controller.CANSend(ENGINE_CONTROL_CAN_ADDR, engineFault,lowACC,motorTempByte,0,0,0,0,0); }     //Spoof for engine controller
     controller.CANSend(SMART_KEY_CAN_ADDR, 0x81, 0, 0, 0, 0, 0, LCD_PowerPrompt, LCD_PowerPrompt ? 0x0D:0); //Smart Key and Push to Start instructions
     controller.CANSend(ANIMATIONS_CAN_ADDR, 0x10, 0, 0, 0, LCD_Brightness, dashAnimationMask, 0x08, seatBeltIcon ? 0x50:0x00);    //Spoof for instrument cluster animations and backlight dimming
     controller.CANSend(ENGINE_PROMPTS_CAN_ADDR, 0, 0 , 0, 0, 0, 0, LCD_EngineStoppedCode, LCD_CheckEnginePrompt);
