@@ -257,23 +257,42 @@ IBOOSTER_CAN::IBOOSTER_CAN(uint32_t boardAddr){
     boardAddress = boardAddr;
 }
 
-/// @brief Initializes the control fields of the Rear Left Driver to a default value. 
+/// @brief Initializes the iBooster state to released / no-board-seen-yet.
+/// Starts brakePercentage at 0 (not 255) so the !boardDetected fail-safe
+/// in readPins() is the only thing driving BrakeSense at boot.
 void IBOOSTER_CAN::initialize(){
-    brakePercentage = 255;  //Null value
+    brakePercentage = 0;
     boardDetected = false;
 }
 
-/// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
+/// @brief Decodes an iBooster CAN frame (0x214). byte5 is pedal position.
+/// Documented range is 0x50 (released) to 0xC0 (pressed), but on the car
+/// byte5 drops BELOW 0x50 at full depression. The old constrain()+scale
+/// read that as "released", flipping BrakeSense off at max pedal (brake
+/// lights and regen coordination disengaging). Below-rest readings are
+/// disambiguated using the prior brakePercentage: if the pedal was
+/// already engaged, a drop below brakeMin is saturation at max, not release.
+/// @param msg The CAN frame that was received by can.receive().
 void IBOOSTER_CAN::receiveCANData(LV_CANMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
 
-        //msg.byte5 ranges from 0x50 (fully released) to 0xC0 (fully pressed)  //Reece: fully pressed my ass. this needs to be fixed. maybe monitor when brakes are being fully pressed by if it is zero and the number was increasing? further testing is needed. 
-        static int brakeMin = 0x50;
-        static int brakeMax = 0xC0;
-        int brakeVal = constrain(msg.byte5, brakeMin, brakeMax);
-        brakePercentage = (uint8_t)((100 * (brakeVal - brakeMin)) / (brakeMax - brakeMin));
+        const int brakeMin = 0x50;
+        const int brakeMax = 0xC0;
+        uint8_t raw = msg.byte5;
+
+        // Uncomment for on-car diagnostics of the actual byte5 values:
+        // Serial.printlnf("iBooster byte5=0x%02X pct=%u", raw, brakePercentage);
+
+        if (raw >= brakeMax) {
+            brakePercentage = 100;
+        } else if (raw >= brakeMin) {
+            brakePercentage = (uint8_t)((100 * (raw - brakeMin)) / (brakeMax - brakeMin));
+        } else if (brakePercentage > 0) {
+            brakePercentage = 100;      // below rest + was engaged -> saturation at max
+        } else {
+            brakePercentage = 0;
+        }
     }
 }
 
