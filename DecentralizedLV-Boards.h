@@ -107,12 +107,11 @@
 #define DASH_CONTROL_ADDR   0x99
 // byte 0: Right Turn PWM 0-255
 // byte 1: Left Turn PWM 0-255
-// byte 2: 
-// byte 3: HV Battery Fan PWM 0-255
+// byte 2: animationTick 
 // byte 4: b0:headlight b1:highbeam b5:reversePress
-// byte 5: 
+// byte 5: Radiator Fan PWM 0-255
 // byte 6: Drive Mode: b0: Drive, b1: Sport, b2: Eco, b3: Reverse, b4: Neutral (BPS fault)
-// byte 7: b0: Radiator Fan, b1: Radiator pump
+// byte 7: Radiator pump
 // EXAMPLE FRAME: CANSend(0x99, 0xFF, 0xFF, 0x00, 0xFF, 0x03, 0x00, 0x01, 0x03);
 // - Right and Left turn signal, headlight, and highbeam are on (at full brightness for L and R signal)
 // - Car is not in low power mode, not doing startup animations
@@ -263,6 +262,21 @@
 // byte 7: 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//App Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
+#define APPCONTROL_ADDR   0x101
+// byte 0: b0: leftTurnSignal, b1: rightTurnSignal, b2: headlight, b3: horn
+// byte 1: driveMode (see DRIVE_MODE_* macros)
+// byte 2: b0: Acc, b1: Ignition, b2: FullStart
+// byte 3: 
+// byte 4:
+// byte 5:
+// byte 6:
+// byte 7:
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 
 /// @brief Generic CAN bus message with address and data fields.
@@ -320,11 +334,12 @@ class DashController_CAN{
     bool highbeam;              //Toggle switch for the car highbeams. True turns on highbeams, false turns off highbeams.
     bool reversePress;          //Toggle switch for being in reverse mode. Use to turn on/off reverse lights, backup camera, etc.
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
-    bool radiatorFan;           //Toggle to control the cooling fan for the motor controller.
+    byte radiatorFanPWM;           //Toggle to control the cooling fan for the motor controller.
     bool radiatorPump;          //Toggle to control the cooling pump for the motor controller.
     bool bmsFaultDetected;      //Flag that is set true if a Battery Management System fault has been detected.
     bool rmsFaultDetected;      //Flag that is set true if a Motor Controller fault has been detected.
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Dash Controller has been received. Use this on other boards to check if you're hearing from the Dash Controller.
+    uint8_t animationTick;      //A tick counter that is used to synchronize animations across the system. Increments every 10ms, resets to 0 after reaching 255.
 
     DashController_CAN(uint32_t boardAddr);
     void initialize();
@@ -350,6 +365,7 @@ class PowerController_CAN{
     bool LowPowerMode;          //Flag indicating to the rest of the system that we are operating in Low Power Mode. Use this to update controls of other boards!
     bool LowACCBattery;         //Flag indicating that the 12V accessory is low (true) or normal (false).
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Power Controller has been received. Use this on other boards to check if you're hearing from the Power Controller.
+    bool usingAppControl;       // New field: true if using app control, false otherwise
 
     PowerController_CAN(uint32_t boardAddr);
     void initialize();
@@ -466,6 +482,31 @@ class IBOOSTER_CAN{
     //void sendCANData(CAN_Controller &controller); No controls yet
     void receiveCANData(LV_CANMessage msg);
 
+};
+
+/// @brief Class to send data from the in-app controls to the system. It should only contain the fields that the app itself controls, not the telemetry that the app only receives.
+class AppController_CAN{
+    public:
+    uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by DASH_CONTROL_ADDR
+    bool usingAppControl;    //Flag to indicate if the app is controlling the car. If false, the car is controlled by the Dash Controller/PowerController buttons.
+    bool leftTurnSignal;
+    bool rightTurnSignal;
+    bool headlight;
+    bool highbeam;
+    bool horn;
+    bool hazards;            //Hazard lights state
+    bool stereo;             //Stereo power state (default ON)
+    bool ipadCharger;        //iPad/Cigarette lighter charger power state (default ON)
+    bool Acc;                //Accessory state
+    bool Ign;                //Ignition state
+    bool FullStart;          //Full start state (ready to drive)
+    uint8_t driveMode;       //Current drive mode (park, reverse, drive, sport, eco, etc.)
+    bool boardDetected;       //Flag to ensure we have heard from the board
+
+    AppController_CAN(uint32_t boardAddr);
+    void initialize();
+    void sendCANData(CAN_Controller &controller);
+    void receiveCANData(LV_CANMessage msg);
 };
 
 #endif

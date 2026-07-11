@@ -1,0 +1,128 @@
+#pragma once
+#define ARDUINOJSON_ENABLE_PROGMEM 0  //Important: this needs to go before any ArduinoJson includes to disable PROGMEM support
+#include <ArduinoJson.h>
+#include <string>
+#include "../HVBoards/DecentralizedLV-HVBoards.h" // Include for HVController_CAN
+
+// Forward declarations
+class PowerController_CAN;
+class DashController_CAN;
+
+class AppStatus {
+public:
+    // Fields that the App can read   
+    // HVController_CAN fields
+    bool Killswitch;
+    bool BMSFault;
+    bool hvBoardDetected;
+    bool dischargeContactorOn;
+    bool chargeContactorOn;
+    bool chargeSafetyOn;
+    uint8_t hvPackSOC;
+    float hvMotorTemperatureC;
+    float hvInverterTemperatureC;
+    uint8_t hvThermistorHighTempC;
+
+    // OrionBMS fields
+    uint8_t batterySOC;
+    float packCurrentAmps;
+    float packInstantaneousVoltage;
+    float inputSupplyVoltage;
+    float avgCellVoltage;
+    float highestCellVoltage;
+    float lowestCellVoltage;
+    float packAmpHours;
+    float packResistanceOhms;
+    float lowestCellResistanceOhms;
+    uint16_t dtcFlags1;
+    uint16_t dtcFlags2;
+    uint16_t dischargeCurrentLimit;
+    uint16_t chargeCurrentLimit;
+    uint8_t bmsAverageTempC;
+    uint8_t bmsInternalTempC;
+    uint8_t thermistorHighTempC;
+    uint8_t thermistorLowTempC;
+    uint16_t relayState;
+    bool j1772PlugState;
+    uint8_t j1772ACCurrentLimit;
+    uint8_t j1772ACVoltage;
+    
+    // Cell voltages array for toCellVoltagesJSON
+    float cellVoltages[180];  // Array to store individual cell voltages
+
+    // RMSController fields
+    uint16_t postFaultHigh;
+    uint16_t postFaultLow;
+    uint16_t runFaultHigh;
+    uint16_t runFaultLow;
+    float accessoryVoltage;
+    float busVoltage;
+    float busCurrent;
+    float commandedTorque;
+    float rmsPhaseACurrent;
+    float rmsMotorTemperatureC;
+    float rmsInverterTemperatureC;
+    uint16_t motorRPM;
+    float motorTempC;
+    bool faultActive;
+
+    // PowerController_CAN fields
+    bool usingAppControl;
+    // Telemetry of PowerController state
+    bool Acc;
+    bool Ign;
+    bool FullStart;
+    bool horn;
+
+    // Fields that the App can set
+    bool leftTurnSignal_App;
+    bool rightTurnSignal_App;
+    bool headlight_App;
+    bool highbeam_App;
+    bool horn_App;
+    bool stereo_App;         // Stereo state set by app (default ON)
+    bool ipadCharger_App;    // iPad charger state set by app (default ON)
+    bool Acc_App;
+    bool Ign_App;
+    bool FullStart_App;
+
+    // Actual current state (merged from manual and app controls)
+    bool leftTurnSignal_Current;
+    bool rightTurnSignal_Current;
+    bool headlight_Current;
+    bool highbeam_Current;
+    bool horn_Current;
+    bool stereo_Current;        // Current stereo state
+    bool ipadCharger_Current;   // Current iPad charger state
+    uint8_t DriveMode;          // Current drive mode
+
+    // ── Odometer ──────────────────────────────────────────────────────────
+    //  Accumulated distance in miles, calculated from motorRPM.
+    //  Persists across power cycles via EEPROM (see PowerController.ino).
+    //  Resolution: ~0.001 mi. Sent to the app in the "pc" JSON packet.
+    double odometerMiles;
+
+    AppStatus();
+
+    void copyFromPowerController(const PowerController_CAN& pc);
+    void copyFromHVController(const HVController_CAN& hv);
+    void copyFromOrionBMS(const OrionBMS& bms);
+    void copyFromRMSController(const RMSController& rms);
+    void copyFromDashController(const DashController_CAN& dc);
+    void mergeControlStates(const DashController_CAN& dc, const AppController_CAN& ac);
+
+    std::string toPowerControllerJSON() const;
+    std::string toOrionBMSJSON_1() const;  // Core electrical: pca, piv, isv, acv, hcv, lcv, pah, pro, lcro, soc
+    std::string toOrionBMSJSON_2() const;  // Flags, limits, temps, relay: dtc1/2, dcl, ccl, temps, J1772
+    std::string toDashboardJSON() const;
+    std::string toRMSJSON() const;
+    std::string toCellVoltagesJSON() const;
+
+    /// Update the odometer by integrating motorRPM over a time delta.
+    /// Call once per loop iteration.  Non-blocking; pure arithmetic.
+    /// @param rpm      Current motor RPM (from RMSController)
+    /// @param deltaMs  Milliseconds elapsed since the last call
+    void updateOdometer(uint16_t rpm, uint32_t deltaMs);
+
+    bool fromJSON(const std::string& json);
+};
