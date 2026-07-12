@@ -510,6 +510,70 @@ void CamryCluster_CAN::sendCANData(CAN_Controller &controller){
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////         APP CONTROL FUNCTIONS         //////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// @brief Constructor for AppController_CAN. Sets the board address (if needed in future).
+AppController_CAN::AppController_CAN(uint32_t boardAddr) {
+    boardAddress = boardAddr;  // Set the CAN bus address for this controller
+}
+
+/// @brief Initializes the control fields of the App Controller to default values.
+void AppController_CAN::initialize() {
+    usingAppControl = false;
+    leftTurnSignal = false;
+    rightTurnSignal = false;
+    headlight = false;
+    highbeam = false;
+    horn = false;
+    hazards = false;
+    stereo = true;           //Default ON when flashed
+    ipadCharger = true;      //Default ON when flashed
+    Acc = false;
+    Ign = false;
+    FullStart = false;
+    driveMode = 0;
+    occupantFanPWM = 0;
+    boardDetected = false;
+}
+
+void AppController_CAN::sendCANData(CAN_Controller &controller) {
+    byte tx0 = (leftTurnSignal ? 1 : 0)
+             | ((rightTurnSignal ? 1 : 0) << 1)
+             | ((headlight ? 1 : 0) << 2)
+             | ((highbeam ? 1 : 0) << 3)
+             | ((horn ? 1 : 0) << 4)
+             | ((hazards ? 1 : 0) << 5)
+             | ((stereo ? 1 : 0) << 6)
+             | ((ipadCharger ? 1 : 0) << 7);
+    byte tx1 = (Acc ? 1 : 0)
+             | ((Ign ? 1 : 0) << 1)
+             | ((FullStart ? 1 : 0) << 2);
+    byte tx2 = driveMode;
+    controller.CANSend(boardAddress, tx0, tx1, tx2, usingAppControl, occupantFanPWM, 0, 0, 0);
+}
+
+void AppController_CAN::receiveCANData(LV_CANMessage msg) {
+    if(msg.addr == boardAddress) {
+        boardDetected = true;
+        leftTurnSignal = msg.byte0 & 0x01;
+        rightTurnSignal = (msg.byte0 >> 1) & 0x01;
+        headlight = (msg.byte0 >> 2) & 0x01;
+        highbeam = (msg.byte0 >> 3) & 0x01;
+        horn = (msg.byte0 >> 4) & 0x01;
+        hazards = (msg.byte0 >> 5) & 0x01;
+        stereo = (msg.byte0 >> 6) & 0x01;
+        ipadCharger = (msg.byte0 >> 7) & 0x01;
+        Acc = msg.byte1 & 0x01;
+        Ign = (msg.byte1 >> 1) & 0x01;
+        FullStart = (msg.byte1 >> 2) & 0x01;
+        driveMode = msg.byte2;
+        usingAppControl = msg.byte3 & 0x01;  // Extract the usingAppControl flag from byte3
+        occupantFanPWM = msg.byte4;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////         CAN BUS CONTROLLER SUBMODULE         ///////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
