@@ -68,6 +68,9 @@ AppStatus::AppStatus() :
     motorRPM(0),
     faultActive(false),
     usingAppControl(false),
+    occupantFanSpeed_App(0),
+    occupantFanSpeed_Current(0),
+    batteryFanPWM(0),
     odometerMiles(0.0)
 {
     // Initialize cell voltages array to 0
@@ -89,6 +92,7 @@ void AppStatus::copyFromHVController(const HVController_CAN& hv) {
     hvMotorTemperatureC = hv.motorTemperatureC;
     hvInverterTemperatureC = hv.inverterTemperatureC;
     hvThermistorHighTempC = hv.thermistorHighTempC;
+    batteryFanPWM = hv.batteryFanPWM;   // Battery-box fan level the HV Controller is driving (status only)
 }
 
 void AppStatus::copyFromOrionBMS(const OrionBMS& bms) {
@@ -187,6 +191,7 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("acc")) Acc_App = doc["acc"];
     if (doc.containsKey("ign")) Ign_App = doc["ign"];
     if (doc.containsKey("fs")) FullStart_App = doc["fs"];
+    if (doc.containsKey("ofan")) occupantFanSpeed_App = doc["ofan"];  // Occupant-cell fan speed (0-255)
     return true;
 }
 
@@ -270,7 +275,7 @@ std::string AppStatus::toRMSJSON() const {
 }
 
 std::string AppStatus::toDashboardJSON() const {
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<320> doc;
     doc["type"] = "dash";
     // Send the actual current state (merged from manual and app controls)
     doc["lts"] = leftTurnSignal_Current;
@@ -284,6 +289,8 @@ std::string AppStatus::toDashboardJSON() const {
     doc["acc"] = Acc;       //FIX: was Acc_App (echoed app command). Now sends actual hardware state.
     doc["ign"] = Ign;       //FIX: was Ign_App
     doc["fs"] = FullStart;  //FIX: was FullStart_App
+    doc["ofan"] = occupantFanSpeed_Current;  // Occupant-cell fan speed currently commanded (0-255)
+    doc["bfan"] = batteryFanPWM;             // Battery-box fan speed (auto, HV-controlled), status only (0-255)
     std::string output;
     serializeJson(doc, output);
     return output;

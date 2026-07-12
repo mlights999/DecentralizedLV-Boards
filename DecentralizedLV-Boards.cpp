@@ -56,7 +56,7 @@ DashController_CAN::DashController_CAN(uint32_t boardAddr){
 void DashController_CAN::initialize(){
     rightTurnPWM = 0;
     leftTurnPWM = 0;
-    batteryFanPWM = 0;
+    occupantFanPWM = 0;
     frontLeftFan1PWM = 0; // Front-Left Fan 1 (HP1)
     frontLeftFan2PWM = 0; // Front-Left Fan 2 (HP0)
     frontRightFanPWM = 0; // Front-Right Fan (HP0)
@@ -80,7 +80,7 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx5 = frontLeftFan2PWM; // Front-Left Fan 2 PWM (byte 5)
     byte tx6 = driveMode;
     byte tx7 = radiatorFan + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Front-Right Fan upper bits (bits 2-4 of byte 7)
-    controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,batteryFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
+    controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,occupantFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
@@ -92,7 +92,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         rightTurnPWM = msg.byte0;
         leftTurnPWM = msg.byte1;
         frontLeftFan1PWM = msg.byte2; // Extract Front-Left Fan 1 from byte 2
-        batteryFanPWM = msg.byte3;
+        occupantFanPWM = msg.byte3;
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
@@ -126,6 +126,7 @@ void HVController_CAN::initialize(){
     motorTemperatureC = 0;
     inverterTemperatureC = 0;
     thermistorHighTempC = 0;
+    batteryFanPWM = 0;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
@@ -134,7 +135,7 @@ void HVController_CAN::sendCANData(CAN_Controller &controller){
     byte tx0 = Killswitch + (BMSFault << 1) + (dischargeContactorOn << 2) + (chargeContactorOn << 3) + (chargeSafetyOn << 4);
     uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
     uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
-    controller.CANSend(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, 0);
+    controller.CANSend(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, batteryFanPWM);
 
 }
 
@@ -157,6 +158,7 @@ void HVController_CAN::receiveCANData(LV_CANMessage msg){
         inverterTemperatureC = (float)(inverterTemperatureTemp / 10.0);                       //Convert to degrees C
 
         thermistorHighTempC = msg.byte6;
+        batteryFanPWM = msg.byte7;
     }
 }
 

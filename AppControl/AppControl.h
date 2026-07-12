@@ -85,6 +85,7 @@ public:
     bool Acc_App;
     bool Ign_App;
     bool FullStart_App;
+    uint8_t occupantFanSpeed_App;   // Occupant-cell (front cabin) fan speed requested by the app, 0 (off) .. 255 (max). Parsed from JSON key "ofan".
 
     // Actual current state (merged from manual and app controls)
     bool leftTurnSignal_Current;
@@ -95,6 +96,8 @@ public:
     bool stereo_Current;        // Current stereo state
     bool ipadCharger_Current;   // Current iPad charger state
     uint8_t DriveMode;          // Current drive mode
+    uint8_t occupantFanSpeed_Current;   // Occupant-cell fan speed actually being commanded (0-255). Echoed back to the app for display.
+    uint8_t batteryFanPWM;              // Battery-box fan speed the HV Controller is currently driving (0-255). Read-only status for the app (fans are auto-controlled by battery temperature).
 
     // ── Odometer ──────────────────────────────────────────────────────────
     //  Accumulated distance in miles, calculated from motorRPM.

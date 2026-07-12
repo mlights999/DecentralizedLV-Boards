@@ -326,7 +326,7 @@ class DashController_CAN{
     uint32_t boardAddress;      //The CAN Bus address that this controller runs at, should be defined by DASH_CONTROL_ADDR
     byte rightTurnPWM;          //Brightness of the right turn signal. Value ranges from 0 (fully off) to 255 (fully on).
     byte leftTurnPWM;           //Brightness of the left turn signal. Value ranges from 0 (fully off) to 255 (fully on).
-    byte batteryFanPWM;         //Fan percentage for the battery box fan. Value ranges from 0 (fully off) to 255 (max speed).
+    byte occupantFanPWM;      //Occupant-cell fan speed (front cabin fans), 0 (off) to 255 (max). Set by the app; carried on Dash frame byte3. Battery-box fans are now driven by the HV Controller.
     byte frontLeftFan1PWM;
     byte frontLeftFan2PWM;
     byte frontRightFanPWM;
@@ -461,6 +461,7 @@ class HVController_CAN{
     float motorTemperatureC;          //This is a copy from the RMS motorTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
     float inverterTemperatureC;       //This is a copy from the RMS inverterTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
     uint8_t thermistorHighTempC;      //This is a copy from the OrionBMS thermistorHighTempC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS.
+    uint8_t batteryFanPWM;            //Battery-box fan speed the HV Controller is currently driving (0=off .. 255=max). Auto-set from the highest cell temperature. Read-only status for the app.
 
     HVController_CAN(uint32_t boardAddr);
     void initialize();
@@ -501,6 +502,7 @@ class AppController_CAN{
     bool Ign;                //Ignition state
     bool FullStart;          //Full start state (ready to drive)
     uint8_t driveMode;       //Current drive mode (park, reverse, drive, sport, eco, etc.)
+    uint8_t occupantFanPWM;  //Occupant-cell fan speed the app is requesting (0=off .. 255=max). Carried on byte4.
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);
