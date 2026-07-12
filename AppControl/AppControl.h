@@ -82,6 +82,7 @@ public:
     bool horn_App;
     bool stereo_App;         // Stereo state set by app (default ON)
     bool ipadCharger_App;    // iPad charger state set by app (default ON)
+    bool runningLights_App;  // Running lights preference set by app (default ON). Dash Controller persists this across reboots.
     bool Acc_App;
     bool Ign_App;
     bool FullStart_App;
@@ -95,6 +96,7 @@ public:
     bool horn_Current;
     bool stereo_Current;        // Current stereo state
     bool ipadCharger_Current;   // Current iPad charger state
+    bool runningLights_Current; // Current running lights state, as reported by the Dash Controller (source of truth)
     uint8_t DriveMode;          // Current drive mode
     uint8_t occupantFanSpeed_Current;   // Occupant-cell fan speed actually being commanded (0-255). Echoed back to the app for display.
     uint8_t batteryFanPWM;              // Battery-box fan speed the HV Controller is currently driving (0-255). Read-only status for the app (fans are auto-controlled by battery temperature).

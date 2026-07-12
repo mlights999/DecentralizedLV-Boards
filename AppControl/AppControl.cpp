@@ -43,6 +43,7 @@ AppStatus::AppStatus() :
     horn_App(false),
     stereo_App(true),            //Default ON
     ipadCharger_App(true),       //Default ON
+    runningLights_App(true),     //Default ON
     Acc_App(false),
     Ign_App(false),
     FullStart_App(false),
@@ -53,6 +54,7 @@ AppStatus::AppStatus() :
     horn_Current(false),
     stereo_Current(true),        //Default ON
     ipadCharger_Current(true),   //Default ON
+    runningLights_Current(true), //Default ON
     DriveMode(0),
     postFaultHigh(0),
     postFaultLow(0),
@@ -155,6 +157,7 @@ void AppStatus::copyFromDashController(const DashController_CAN& dc) {
     rightTurnSignal_Current = (dc.rightTurnPWM > 0);
     headlight_Current = dc.headlight;
     highbeam_Current = dc.highbeam;
+    runningLights_Current = dc.runningLights;
     // Merge dash fault indicators with authoritative HV/RMS sources (FIX: was overwriting with =)
     BMSFault = BMSFault || dc.bmsFaultDetected;
     faultActive = faultActive || dc.rmsFaultDetected;
@@ -171,6 +174,7 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     horn_Current = ac.horn || horn;  //FIX: was horn_Current (self-reference, latched on forever). Use hardware horn state from PowerController.
     stereo_Current = ac.stereo;           // App controlled
     ipadCharger_Current = ac.ipadCharger; // App controlled
+    runningLights_Current = dc.runningLights; // Dash Controller is source of truth
     DriveMode = dc.driveMode;
 }
 
@@ -188,6 +192,7 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("hn")) horn_App = doc["hn"];
     if (doc.containsKey("st")) stereo_App = doc["st"];
     if (doc.containsKey("ic")) ipadCharger_App = doc["ic"];
+    if (doc.containsKey("rl")) runningLights_App = doc["rl"];
     if (doc.containsKey("acc")) Acc_App = doc["acc"];
     if (doc.containsKey("ign")) Ign_App = doc["ign"];
     if (doc.containsKey("fs")) FullStart_App = doc["fs"];
@@ -285,6 +290,7 @@ std::string AppStatus::toDashboardJSON() const {
     doc["hn"] = horn_Current;
     doc["st"] = stereo_Current;
     doc["ic"] = ipadCharger_Current;
+    doc["rl"] = runningLights_Current;
     doc["dm"] = DriveMode;  // Include drive mode so app can display gear
     doc["acc"] = Acc;       //FIX: was Acc_App (echoed app command). Now sends actual hardware state.
     doc["ign"] = Ign;       //FIX: was Ign_App

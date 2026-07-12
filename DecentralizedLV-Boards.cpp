@@ -62,6 +62,7 @@ void DashController_CAN::initialize(){
     frontRightFanPWM = 0; // Front-Right Fan (HP0)
     headlight = false;
     highbeam = false;
+    runningLights = false;
     reversePress = false;
     driveMode = 0;
     radiatorFanPWM = 0;
@@ -76,7 +77,7 @@ void DashController_CAN::initialize(){
 /// Encodes new fan PWM values into CAN message bytes
 void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx2 = frontLeftFan1PWM; // Front-Left Fan 1 PWM (byte 2)
-    byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
+    byte tx4 = headlight + (highbeam << 1) + (runningLights << 2) + (reversePress << 5);
     byte tx5 = frontLeftFan2PWM; // Front-Left Fan 2 PWM (byte 5)
     byte tx6 = driveMode;
     byte tx7 = (radiatorFanPWM ? 1 : 0) + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Radiator fan on/off (bit 0, only 1 bit available - see radiatorFanPWM comment); Front-Right Fan upper bits (bits 2-4 of byte 7)
@@ -95,6 +96,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         occupantFanPWM = msg.byte3;
         headlight = msg.byte4 & 1;
         highbeam = (msg.byte4 >> 1) & 1;
+        runningLights = (msg.byte4 >> 2) & 1;
         reversePress = (msg.byte4 >> 5) & 1;
         frontLeftFan2PWM = msg.byte5; // Extract Front-Left Fan 2 from byte 5
         driveMode = msg.byte6;
@@ -529,6 +531,7 @@ void AppController_CAN::initialize() {
     hazards = false;
     stereo = true;           //Default ON when flashed
     ipadCharger = true;      //Default ON when flashed
+    runningLights = true;    //Default ON when flashed - Dash Controller's persisted preference overrides this after first boot
     Acc = false;
     Ign = false;
     FullStart = false;
@@ -550,7 +553,8 @@ void AppController_CAN::sendCANData(CAN_Controller &controller) {
              | ((Ign ? 1 : 0) << 1)
              | ((FullStart ? 1 : 0) << 2);
     byte tx2 = driveMode;
-    controller.CANSend(boardAddress, tx0, tx1, tx2, usingAppControl, occupantFanPWM, 0, 0, 0);
+    byte tx3 = (usingAppControl ? 1 : 0) | ((runningLights ? 1 : 0) << 1);
+    controller.CANSend(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, 0, 0, 0);
 }
 
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
@@ -569,6 +573,7 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         FullStart = (msg.byte1 >> 2) & 0x01;
         driveMode = msg.byte2;
         usingAppControl = msg.byte3 & 0x01;  // Extract the usingAppControl flag from byte3
+        runningLights = (msg.byte3 >> 1) & 0x01;  // Extract the app-requested running lights preference from byte3
         occupantFanPWM = msg.byte4;
     }
 }
