@@ -64,7 +64,7 @@ void DashController_CAN::initialize(){
     highbeam = false;
     reversePress = false;
     driveMode = 0;
-    radiatorFan = false;
+    radiatorFanPWM = 0;
     radiatorPump = false;
     bmsFaultDetected = false;
     rmsFaultDetected = false;
@@ -79,7 +79,7 @@ void DashController_CAN::sendCANData(CAN_Controller &controller){
     byte tx4 = headlight + (highbeam << 1) + (reversePress << 5);
     byte tx5 = frontLeftFan2PWM; // Front-Left Fan 2 PWM (byte 5)
     byte tx6 = driveMode;
-    byte tx7 = radiatorFan + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Front-Right Fan upper bits (bits 2-4 of byte 7)
+    byte tx7 = (radiatorFanPWM ? 1 : 0) + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Radiator fan on/off (bit 0, only 1 bit available - see radiatorFanPWM comment); Front-Right Fan upper bits (bits 2-4 of byte 7)
     controller.CANSend(boardAddress, rightTurnPWM,leftTurnPWM,tx2,occupantFanPWM,tx4,tx5,tx6,tx7);   //Send out the main message to the corner boards
 }
 
@@ -98,7 +98,7 @@ void DashController_CAN::receiveCANData(LV_CANMessage msg){
         reversePress = (msg.byte4 >> 5) & 1;
         frontLeftFan2PWM = msg.byte5; // Extract Front-Left Fan 2 from byte 5
         driveMode = msg.byte6;
-        radiatorFan = msg.byte7 & 1;
+        radiatorFanPWM = (msg.byte7 & 1) ? 255 : 0; // Only 1 bit is transmitted (see radiatorFanPWM comment) - expand to full on/off
         radiatorPump = (msg.byte7 >> 1) & 1;
         frontRightFanPWM = ((msg.byte7 >> 2) & 0x07) << 5; // Extract Front-Right Fan from bits 2-4, shift back to full byte
     }

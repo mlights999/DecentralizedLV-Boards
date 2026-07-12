@@ -334,7 +334,7 @@ class DashController_CAN{
     bool highbeam;              //Toggle switch for the car highbeams. True turns on highbeams, false turns off highbeams.
     bool reversePress;          //Toggle switch for being in reverse mode. Use to turn on/off reverse lights, backup camera, etc.
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
-    byte radiatorFanPWM;           //Toggle to control the cooling fan for the motor controller.
+    byte radiatorFanPWM;           //Cooling fan for the motor controller. NOTE: byte7 on the wire only has 1 free bit for this, so sendCANData/receiveCANData only transmit it as on/off (0 or 255), not true PWM.
     bool radiatorPump;          //Toggle to control the cooling pump for the motor controller.
     bool bmsFaultDetected;      //Flag that is set true if a Battery Management System fault has been detected.
     bool rmsFaultDetected;      //Flag that is set true if a Motor Controller fault has been detected.
