@@ -290,7 +290,8 @@ std::string AppStatus::toDashboardJSON() const {
     doc["hn"] = horn_Current;
     doc["st"] = stereo_Current;
     doc["ic"] = ipadCharger_Current;
-    doc["rl"] = runningLights_Current;
+    doc["rl"] = runningLights_Current;      // Actual running-lights output as reported by the Dash (preference AND car-powered)
+    doc["rla"] = runningLights_App;         // DEBUG: running-lights value this gateway last received from the app (before Dash gating). If "rla" tracks the toggle but "rl" doesn't, the break is on the Dash (usingAppControl / car-power gate), not the app link.
     doc["dm"] = DriveMode;  // Include drive mode so app can display gear
     doc["acc"] = Acc;       //FIX: was Acc_App (echoed app command). Now sends actual hardware state.
     doc["ign"] = Ign;       //FIX: was Ign_App
