@@ -81,8 +81,6 @@ class OrionBMS {
     uint16_t packRawAmps;               //raw unsigned amps (goes to 65535 when negative amps)
   uint16_t nextCellBroadcastIndex;    //next starting cell index to broadcast (0..179), step by 3
 
-    uint16_t packRawAmps;               //raw unsigned amps (goes to 65535 when negative amps)
-
     public:
   // Real-time per-cell voltages (converted to volts). Index is Cell ID (0..179)
   float cellVoltages[180];
