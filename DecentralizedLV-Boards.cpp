@@ -738,9 +738,9 @@ void CAN_Controller::CANSend(LV_CANMessage inputMessage){
     can.transmit(txMessage);
 }
 
-/// @brief Puts the CAN controller into sleep mode (Photon version - uses built-in CAN sleep)
+/// @brief Puts the CAN controller into sleep mode (Photon version - CANChannel has no sleep(), so stop the peripheral instead; wake() restarts it with begin())
 void CAN_Controller::sleep(){
-    can.sleep();
+    can.end();
 }
 
 /// @brief Wakes the CAN controller from sleep mode (Photon version)
