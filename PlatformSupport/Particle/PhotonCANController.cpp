@@ -11,11 +11,11 @@ bool PhotonCANController::begin(uint32_t busSpeed) {
 }
 
 bool PhotonCANController::messageAvailable() {
-    CANMessage message;
+    CANBusMessage message;
     return receive(message);
 }
 
-bool PhotonCANController::receive(CANMessage &outputMessage) {
+bool PhotonCANController::receive(CANBusMessage &outputMessage) {
     CANMessage inputMessage;
     bool receivedMessage = can.receive(inputMessage);
     if (!receivedMessage) {
@@ -48,7 +48,7 @@ void PhotonCANController::send(uint32_t addr, uint8_t data0, uint8_t data1, uint
     can.transmit(txMessage);
 }
 
-void PhotonCANController::send(CANMessage inputMessage) {
+void PhotonCANController::send(CANBusMessage inputMessage) {
     CANMessage txMessage;
     txMessage.id = inputMessage.addr;
     txMessage.len = 8;

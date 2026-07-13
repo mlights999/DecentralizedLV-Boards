@@ -20,7 +20,7 @@ bool Particle_MCP2515CANController::messageAvailable() {
     return canController != nullptr && canController->checkReceive();
 }
 
-bool Particle_MCP2515CANController::receive(CANMessage &outputMessage) {
+bool Particle_MCP2515CANController::receive(CANBusMessage &outputMessage) {
     if (!messageAvailable()) {
         return false;
     }
@@ -50,7 +50,7 @@ void Particle_MCP2515CANController::send(uint32_t addr, uint8_t data0, uint8_t d
     canController->sendMsgBuf(addr, 0, 8, data);
 }
 
-void Particle_MCP2515CANController::send(CANMessage inputMessage) {
+void Particle_MCP2515CANController::send(CANBusMessage inputMessage) {
     if (!canController) {
         return;
     }

@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 /// @brief Generic CAN bus message with address and data fields.
-class CANMessage{
+class CANBusMessage{
   public:
 
     //CAN bus address of this message, standard or extended

@@ -3,7 +3,7 @@
 
 #include "Particle.h"
 #include <mcp_can.h>
-#include "API/CAN/CANMessage.h"
+#include "API/CAN/CANBusMessage.h"
 #include "API/CAN/ICANController.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -309,7 +309,7 @@ class DashController_CAN{
     DashController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);
+    void receiveCANData(CANBusMessage msg);
     
 };
 
@@ -335,7 +335,7 @@ class PowerController_CAN{
     PowerController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);
+    void receiveCANData(CANBusMessage msg);
 
 };
 
@@ -348,7 +348,7 @@ class LPDRV_RearLeft_CAN{
     LPDRV_RearLeft_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);
+    void receiveCANData(CANBusMessage msg);
 };
 
 /// @brief Class to send data from Dash Controller to Camry Instrument Cluster.
@@ -409,7 +409,7 @@ class CamryCluster_CAN{
 
     void initialize();
     void sendCANData(ICANController &controller);
-    //void receiveCANData(CANMessage msg);
+    //void receiveCANData(CANBusMessage msg);
 };
 
 /// @brief Class to send data from HV Controller OR to receive CAN data from the HV Controller on other boards.
@@ -431,7 +431,7 @@ class HVController_CAN{
     HVController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);
+    void receiveCANData(CANBusMessage msg);
 
 };
 
@@ -446,7 +446,7 @@ class IBOOSTER_CAN{
     IBOOSTER_CAN(uint32_t boardAddr);
     void initialize();
     //void sendCANData(ICANController &controller); No controls yet
-    void receiveCANData(CANMessage msg);
+    void receiveCANData(CANBusMessage msg);
 
 };
 
@@ -474,7 +474,7 @@ class AppController_CAN{
     AppController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);
+    void receiveCANData(CANBusMessage msg);
 };
 
 #endif

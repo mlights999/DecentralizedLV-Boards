@@ -3,12 +3,6 @@
 #include "Particle.h"
 #include <mcp_can.h>
 
-#if PLATFORM_ID == PLATFORM_PHOTON_PRODUCTION   //If we're not on a photon, assume we're using the MCP2515 library
-
-    CANChannel can(CAN_D1_D2);
-
-#endif
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////       DASHBOARD CONTROLLER FUNCTIONS      //////////////////////////////////////////////////////////////
@@ -53,9 +47,9 @@ void DashController_CAN::sendCANData(ICANController &controller){
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to CANMessage by copying address and byte.
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANBusMessage to CANBusMessage by copying address and byte.
 /// Decondes new fan PWM values from CAN message bytes
-void DashController_CAN::receiveCANData(CANMessage msg){
+void DashController_CAN::receiveCANData(CANBusMessage msg){
     if(msg.addr == boardAddress){   //Our message that we received was from this board. Go ahead and import the data to the packets.
         boardDetected = true;
         rightTurnPWM = msg.bytes[0];
@@ -110,8 +104,8 @@ void HVController_CAN::sendCANData(ICANController &controller){
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to CANMessage by copying address and byte.
-void HVController_CAN::receiveCANData(CANMessage msg){
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANBusMessage to CANBusMessage by copying address and byte.
+void HVController_CAN::receiveCANData(CANBusMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
         //do something with the hv controller data
@@ -168,8 +162,8 @@ void PowerController_CAN::sendCANData(ICANController &controller){
     controller.send(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);
 }
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to CANMessage by copying address and byte.
-void PowerController_CAN::receiveCANData(CANMessage msg){
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANBusMessage to CANBusMessage by copying address and byte.
+void PowerController_CAN::receiveCANData(CANBusMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
         //do something with the power controller data
@@ -212,8 +206,8 @@ void LPDRV_RearLeft_CAN::sendCANData(ICANController &controller){
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to CANMessage by copying address and byte.
-void LPDRV_RearLeft_CAN::receiveCANData(CANMessage msg){
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANBusMessage to CANBusMessage by copying address and byte.
+void LPDRV_RearLeft_CAN::receiveCANData(CANBusMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
         bmsFaultInput = msg.bytes[0] & 1;  //Extract BMS fault from the first bit of byte 0
@@ -239,8 +233,8 @@ void IBOOSTER_CAN::initialize(){
 }
 
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to CANMessage by copying address and byte.
-void IBOOSTER_CAN::receiveCANData(CANMessage msg){
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANBusMessage to CANBusMessage by copying address and byte.
+void IBOOSTER_CAN::receiveCANData(CANBusMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
 
@@ -525,7 +519,7 @@ void AppController_CAN::sendCANData(ICANController &controller) {
     controller.send(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, 0, 0, 0);
 }
 
-void AppController_CAN::receiveCANData(CANMessage msg) {
+void AppController_CAN::receiveCANData(CANBusMessage msg) {
     if(msg.addr == boardAddress) {
         boardDetected = true;
         leftTurnSignal = msg.bytes[0] & 0x01;

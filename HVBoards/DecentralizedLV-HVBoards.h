@@ -28,7 +28,7 @@
 
 #include "Particle.h"
 #include <mcp_can.h>
-#include "../API/CAN/CANMessage.h"
+#include "../API/CAN/CANBusMessage.h"
 #include "DecentralizedLV-Boards/DecentralizedLV-Boards.h"
 #include "DecentralizedLV-Boards/HVBoards/dbc_rms.h"
 #include "DecentralizedLV-Boards/HVBoards/dbc_bms.h"
@@ -72,12 +72,12 @@ class OrionBMS {
     void sendJ1772Stats(ICANController &controller);            //Sends the J1772 charger status to the LV CAN Bus
     void sendCellVoltages(ICANController &controller);          //Sends per-cell voltages from cellVoltages[] to CAN (rate limited)
 
-    void receivePackStats(CANMessage msg);                   //Receives the pack statistics from the board translating from the HV Bus and parses it into this object
-    void receiveCellStatsDTC(CANMessage msg);                //Receives the cell statistics and DTC error codes from the board translating from the HV Bus and parses it into this object
-    void receiveCurrentLimitAndTemp(CANMessage msg);         //Receives the current limits and temperatures from the board translating from the HV Bus and parses it into this object
-    void receiveJ1772Stats(CANMessage msg);                  //Receives the J1772 charger status from the board translating from the HV Bus and parses it into this object
-  void receiveCellBroadcast(CANMessage msg);               //Receives the cell broadcast message with per-cell voltage
-    void receiveCellBroadcastLV(CANMessage msg);            //LV-only parse of cell broadcast (ignore bytes 3-7 and checksum)
+    void receivePackStats(CANBusMessage msg);                   //Receives the pack statistics from the board translating from the HV Bus and parses it into this object
+    void receiveCellStatsDTC(CANBusMessage msg);                //Receives the cell statistics and DTC error codes from the board translating from the HV Bus and parses it into this object
+    void receiveCurrentLimitAndTemp(CANBusMessage msg);         //Receives the current limits and temperatures from the board translating from the HV Bus and parses it into this object
+    void receiveJ1772Stats(CANBusMessage msg);                  //Receives the J1772 charger status from the board translating from the HV Bus and parses it into this object
+  void receiveCellBroadcast(CANBusMessage msg);               //Receives the cell broadcast message with per-cell voltage
+    void receiveCellBroadcastLV(CANBusMessage msg);            //LV-only parse of cell broadcast (ignore bytes 3-7 and checksum)
 
     uint16_t packRawAmps;               //raw unsigned amps (goes to 65535 when negative amps)
   uint16_t nextCellBroadcastIndex;    //next starting cell index to broadcast (0..179), step by 3
@@ -123,11 +123,11 @@ class OrionBMS {
     OrionBMS(uint32_t packStatsAddress, uint32_t cellStatsDTCAddress, uint32_t currentLimitTempAddress, uint32_t j1772Address);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);     //Receives data from the HV Controller (or whichever board is translating the HV CAN Bus to the LV CAN Bus) and parses it into this object
-    void receiveHVCANData(CANMessage msg);   //Takes messages from the HV CAN Bus and parses them into this object which can then be sent on the LV CAN Bus
+    void receiveCANData(CANBusMessage msg);     //Receives data from the HV Controller (or whichever board is translating the HV CAN Bus to the LV CAN Bus) and parses it into this object
+    void receiveHVCANData(CANBusMessage msg);   //Takes messages from the HV CAN Bus and parses them into this object which can then be sent on the LV CAN Bus
 
   // Public entry to parse a cell broadcast CAN message (0x36)
-  void receiveCellData(CANMessage msg);
+  void receiveCellData(CANBusMessage msg);
 };
 
 //Class to represent the Orion BMS on the Low Voltage CAN Bus. This class contains only necessary info that will be parsed from the HV CAN Bus
@@ -174,9 +174,9 @@ class RMSController {
     void sendMotorTemp(ICANController &controller);              //Sends the motor statistics and inverter temperature to the LV CAN Bus
     void sendFaults(ICANController &controller);                 //Sends the fault codes to the LV CAN Bus
     
-    void receivePowerStats(CANMessage msg);                   //Receives the power statistics from the board translating from the HV Bus and parses it into this object
-    void receiveMotorTemp(CANMessage msg);                    //Receives the motor statistics and inverter temperature from the board translating from the HV Bus and parses it into this object
-    void receiveFaults(CANMessage msg);                       //Receives the fault codes from the board translating from the HV Bus and parses it into this object
+    void receivePowerStats(CANBusMessage msg);                   //Receives the power statistics from the board translating from the HV Bus and parses it into this object
+    void receiveMotorTemp(CANBusMessage msg);                    //Receives the motor statistics and inverter temperature from the board translating from the HV Bus and parses it into this object
+    void receiveFaults(CANBusMessage msg);                       //Receives the fault codes from the board translating from the HV Bus and parses it into this object
 
     public:
 
@@ -205,8 +205,8 @@ class RMSController {
     RMSController(uint32_t powerStatAddress, uint32_t motorTempAddress, uint32_t faultsAddress);
     void initialize();
     void sendCANData(ICANController &controller);
-    void receiveCANData(CANMessage msg);     //Receives data from the HV Controller (or whichever board is translating the HV CAN Bus to the LV CAN Bus) and parses it into this object
-    void receiveHVCANData(CANMessage msg);   //Takes messages from the HV CAN Bus and parses them into this object which can then be sent on the LV CAN Bus
+    void receiveCANData(CANBusMessage msg);     //Receives data from the HV Controller (or whichever board is translating the HV CAN Bus to the LV CAN Bus) and parses it into this object
+    void receiveHVCANData(CANBusMessage msg);   //Takes messages from the HV CAN Bus and parses them into this object which can then be sent on the LV CAN Bus
 };
 
 #endif // DECENTRALIZEDLV_HVBOARDS_H
