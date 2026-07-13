@@ -55,7 +55,7 @@ At this point, your project on GitHub should reference the submodule and have it
 
 Below is an explanation of the classes in this submodule meant for handling CAN Bus communication using the platform-agnostic CAN_Controller class. In the [Adding Boards to the API](#adding-boards-to-the-api) section I have example code for creating these new classes in the source files.
 
-### `LV_CANMessage`
+### `LV_CANBusMessage`
 A generic CAN bus message class with address and data fields. This is used to transmit and receive from a `CAN_Controller` object.
 
 ### `CAN_Controller`
@@ -63,8 +63,8 @@ Class to represent a hardware CAN Bus controller which can transmit/receive CAN 
 
 #### Functions
 - ```addFilter```: Sets the CAN Bus controller to only receive on certain addresses. Call this multiple times for each address you wish to receive from. There are maximums for the number of filters you can have. Check the [Particle Photon](https://docs.particle.io/reference/device-os/firmware/#can-canbus-) and [MCP2515](https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf) datasheets for this.
-- ```receive```: Receives a message from the CAN Bus if there is one present. Pass in a LV_CANMessage to this function. This will then be updated to the values of the received messages. Returns a boolean indicating if a message was received.
-- ```CANSend```: Sends a message on the CAN Bus. Can either send a ```LV_CANMessage``` or manually specify the address and data bytes.
+- ```receive```: Receives a message from the CAN Bus if there is one present. Pass in a LV_CANBusMessage to this function. This will then be updated to the values of the received messages. Returns a boolean indicating if a message was received.
+- ```CANSend```: Sends a message on the CAN Bus. Can either send a ```LV_CANBusMessage``` or manually specify the address and data bytes.
 - ```changeCANSpeed```: Reinitializes the CAN Bus controller at the specified speed.
 - ```CurrentBaudRate```: Returns the current baud rate of the CAN Bus controller.
 - ```begin```: Initializes the CAN Bus controller at the given speed. When using the MCP2515, this function also takes the Chip Select pin.
@@ -74,7 +74,7 @@ Class to represent a hardware CAN Bus controller which can transmit/receive CAN 
 CAN_Controller canController;       // Create an instance of the CAN Controller
 canController.begin(500000);        // Start CAN bus transmission at 500000kbps CAN on a Photon.
 
-LV_CANMessage lv_message;           // Create a new CAN Message to be sent
+LV_CANBusMessage lv_message;           // Create a new CAN Message to be sent
 lv_message.address = 0x100;         // Set the address to 0x100
 lv_message.byte0 = 0x55;            // Set the data byte 0 to be 0x55
 
@@ -89,7 +89,7 @@ canController.CANSend(lv_message);  // Send out message on address 0x100 with da
 CAN_Controller canController;       // Create an instance of the CAN Controller
 canController.begin(500000, A2);    // Start CAN bus transmission at 500000kbps CAN on a MCP2515.
 
-LV_CANMessage lv_message;           // Create a new CAN Message to be sent
+LV_CANBusMessage lv_message;           // Create a new CAN Message to be sent
 lv_message.address = 0x100;         // Set the address to 0x100
 lv_message.byte0 = 0x55;            // Set the data byte 0 to be 0x55
 
@@ -107,7 +107,7 @@ canControllerA.begin(500000, A2);    // Start CAN bus transmission at 500000kbps
 CAN_Controller canControllerB;       // Create an instance of the CAN Controller
 canControllerB.begin(500000, A3);    // Start CAN bus transmission at 500000kbps CAN on a MCP2515.
 
-LV_CANMessage lv_message;           // Create a new CAN Message to be sent
+LV_CANBusMessage lv_message;           // Create a new CAN Message to be sent
 lv_message.address = 0x100;         // Set the address to 0x100
 lv_message.byte0 = 0x55;            // Set the data byte 0 to be 0x55
 
@@ -301,11 +301,11 @@ dc.sendCANData(canController);      // Finally, send out the data to the rest of
 
 ### Dashboard Controller Receive Example
 
-Below is example code that would be run on a board that would receive information from the Dashboard Controller, such as the Power Controller, LPDRV boards, and HV Controller. An instance of the ```DashController_CAN``` class is created which will decode messages from the actual Dashboard Controller. Calling ```dc.receiveCANData(canMessage)``` will populate the fields (```rightTurnPWM```, ```headlight```, ```highbeam```, etc) with the values set by the Dashboard Controller, which you can then use to turn stuff on and off. When running the code from these two examples, the below snippet would print out ```"Received the right turn signal value of 255 from the Dash Controller!"```.
+Below is example code that would be run on a board that would receive information from the Dashboard Controller, such as the Power Controller, LPDRV boards, and HV Controller. An instance of the ```DashController_CAN``` class is created which will decode messages from the actual Dashboard Controller. Calling ```dc.receiveCANData(CANBusMessage)``` will populate the fields (```rightTurnPWM```, ```headlight```, ```highbeam```, etc) with the values set by the Dashboard Controller, which you can then use to turn stuff on and off. When running the code from these two examples, the below snippet would print out ```"Received the right turn signal value of 255 from the Dash Controller!"```.
 
 ```cpp
 CAN_Controller canController;           // Create an instance of the CAN Controller
-LV_CANMessage canMessage;               // Create an instance of the LV_CANMessage (populated by canController.receive())
+LV_CANBusMessage CANBusMessage;               // Create an instance of the LV_CANBusMessage (populated by canController.receive())
 DashController_CAN dc(0x99);            // Create a representation of the Dash Controller which will receive on address 0x99
 
 void setup(){
@@ -314,8 +314,8 @@ void setup(){
 }
 
 void loop(){
-    if(canController.receive(canMessage)){  // Check if we received a message
-        dc.receiveCANData(canMessage);      // Process the message
+    if(canController.receive(CANBusMessage)){  // Check if we received a message
+        dc.receiveCANData(CANBusMessage);      // Process the message
         // Now that we've received the CAN bus data from the Dashboard Controller, you can just access the fields to get the data!
         Serial.printlnf("Received the right turn signal value of %d from the Dash Controller!", dc.rightTurnPWM);
         //dc.headlight would be true
@@ -362,8 +362,8 @@ void SomeBoardName_CAN::sendCANData(CAN_Controller &controller){
     controller.CANSend(boardAddress, tx0, tx1, tx2, 0, 0, 0, 0, 0);     //Replace the 0's with some byte variables if you need more bytes
 }
 /// @brief Extracts CAN frame data into the object's variables so you can use them for controlling other things
-/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANMessage to LV_CANMessage by copying address and byte.
-void SomeBoardName_CAN::receiveCANData(LV_CANMessage msg){
+/// @param msg The CAN frame that was received by can.receive(). Need to convert from CANBusMessage to LV_CANBusMessage by copying address and byte.
+void SomeBoardName_CAN::receiveCANData(LV_CANBusMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
         boardDetected = (msg.byte2 >> 2) & 1;
@@ -397,7 +397,7 @@ class SomeBoardName_CAN{
     SomeBoardName_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(CAN_Controller &controller);
-    void receiveCANData(LV_CANMessage msg);
+    void receiveCANData(LV_CANBusMessage msg);
 
 };
 ```

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "CANMessage.h"
+#include "CANBusMessage.h"
 
 /// @brief Platform-agnostic interface for CAN controllers
 class ICANController{
@@ -19,13 +19,13 @@ class ICANController{
     virtual bool messageAvailable() = 0;
 
     // Attempts to read a CAN frame from the controller. Return value indicates success
-    virtual bool receive(CANMessage &outputMessage) = 0;
+    virtual bool receive(CANBusMessage &outputMessage) = 0;
     
     // Transmits a CAN frame to the bus
     virtual void send(uint32_t addr, uint8_t data0, uint8_t data1, uint8_t data2, uint8_t data3, uint8_t data4, uint8_t data5, uint8_t data6, uint8_t data7) = 0;
     
     // Transmits a CAN frame to the bus
-    virtual void send(CANMessage inputMessage) = 0;
+    virtual void send(CANBusMessage inputMessage) = 0;
 
 
     // ---- CANBUS SPEED FUNCTIONS ----

@@ -93,7 +93,7 @@ void OrionBMS::sendCANData(ICANController &controller)
   sendJ1772Stats(controller);           //Sends the J1772 charger status to the LV CAN Bus
 }
 
-void OrionBMS::receivePackStats(CANMessage msg)
+void OrionBMS::receivePackStats(CANBusMessage msg)
 {
   if(msg.addr != packStatsAddr) return; //Ignore messages not meant for this address
 
@@ -113,7 +113,7 @@ void OrionBMS::receivePackStats(CANMessage msg)
   packStatsReceived = true;                                                              //Set the flag to true to indicate that pack stats have been received
 }
 
-void OrionBMS::receiveCellStatsDTC(CANMessage msg)
+void OrionBMS::receiveCellStatsDTC(CANBusMessage msg)
 {
   if(msg.addr != cellStatsDTCAddr) return; //Ignore messages not meant for this address
 
@@ -127,7 +127,7 @@ void OrionBMS::receiveCellStatsDTC(CANMessage msg)
   cellStatsDTCReceived = true;                                                           //Set the flag to true to indicate that cell stats and DTC have been received
 }
 
-void OrionBMS::receiveCurrentLimitAndTemp(CANMessage msg)
+void OrionBMS::receiveCurrentLimitAndTemp(CANBusMessage msg)
 {
   if(msg.addr != currentLimitTempAddr) return; //Ignore messages not meant for this address
 
@@ -141,7 +141,7 @@ void OrionBMS::receiveCurrentLimitAndTemp(CANMessage msg)
   currentLimitTempReceived = true;                                                       //Set the flag to true to indicate that current limits and temperatures have been received
 }
 
-void OrionBMS::receiveJ1772Stats(CANMessage msg)
+void OrionBMS::receiveJ1772Stats(CANBusMessage msg)
 {
   if(msg.addr != j1772Addr) return; //Ignore messages not meant for this address
 
@@ -154,7 +154,7 @@ void OrionBMS::receiveJ1772Stats(CANMessage msg)
   relayState = (msg.bytes[3] << 8) + msg.bytes[4];                                           //Bitmask for the contactor state from the Orion
 }
 
-void OrionBMS::receiveCANData(CANMessage msg)
+void OrionBMS::receiveCANData(CANBusMessage msg)
 {
   receivePackStats(msg);            //Receives the pack statistics from the board translating from the HV Bus and parses it into this object
   receiveCellStatsDTC(msg);         //Receives the cell statistics and DTC error codes from the board translating from the HV Bus and parses it into this object
@@ -162,14 +162,14 @@ void OrionBMS::receiveCANData(CANMessage msg)
   receiveJ1772Stats(msg);           //Receives the J1772 charger status from the board translating from the HV Bus and parses it into this object
 }
 
-void OrionBMS::receiveHVCANData(CANMessage msg)
+void OrionBMS::receiveHVCANData(CANBusMessage msg)
 {
   auto bms = bmscanmap.find(msg.addr);
 
   if (bms != bmscanmap.end()) {
     // Found the ID in the BMS CAN Map
     // The unpack will automatically feed the message into the appropriate struct for parsing the data
-    // Conversion from CANMessage to uint8_t array for unpacking
+    // Conversion from CANBusMessage to uint8_t array for unpacking
     //Serial.printlnf("Found BMS ID: %X", msg.addr);
     uint8_t data[8] = {msg.bytes[0], msg.bytes[1], msg.bytes[2], msg.bytes[3], msg.bytes[4], msg.bytes[5], msg.bytes[6], msg.bytes[7]};
     bms->second->unpack(data, msg.addr);
@@ -287,7 +287,7 @@ void RMSController::sendCANData(ICANController &controller)
   sendFaults(controller);                 //Sends the fault codes to the LV CAN Bus
 }
 
-void RMSController::receivePowerStats(CANMessage msg)
+void RMSController::receivePowerStats(CANBusMessage msg)
 {
   if (msg.addr != powerStatAddr) return; //Ignore messages not meant for this address
 
@@ -304,7 +304,7 @@ void RMSController::receivePowerStats(CANMessage msg)
   powerStatsReceived = true;                                                          //Set the flag to true to indicate that power stats have been received
 }
 
-void RMSController::receiveMotorTemp(CANMessage msg)
+void RMSController::receiveMotorTemp(CANBusMessage msg)
 {
   if (msg.addr != motorTempAddr) return; //Ignore messages not meant for this address
 
@@ -321,7 +321,7 @@ void RMSController::receiveMotorTemp(CANMessage msg)
   motorTempReceived = true;                                                           //Set the flag to true to indicate that motor temp has been received
 }
 
-void RMSController::receiveFaults(CANMessage msg)
+void RMSController::receiveFaults(CANBusMessage msg)
 {
   if (msg.addr != faultsAddr) return; //Ignore messages not meant for this address
 
@@ -338,14 +338,14 @@ void RMSController::receiveFaults(CANMessage msg)
   faultsReceived = true;                                                              //Set the flag to true to indicate that faults have been received
 }
 
-void RMSController::receiveCANData(CANMessage msg)
+void RMSController::receiveCANData(CANBusMessage msg)
 {
   receivePowerStats(msg);            //Receives the power statistics from the board translating from the HV Bus and parses it into this object
   receiveMotorTemp(msg);              //Receives the motor statistics and inverter temperature from the board translating from the HV Bus and parses it into this object
   receiveFaults(msg);                 //Receives the fault codes from the board translating from the HV Bus and parses it into this object
 }
 
-void RMSController::receiveHVCANData(CANMessage msg)
+void RMSController::receiveHVCANData(CANBusMessage msg)
 {
 
   auto rms = rmscanmap.find(msg.addr);
@@ -353,7 +353,7 @@ void RMSController::receiveHVCANData(CANMessage msg)
   {
     // Found the ID in the RMS CAN Map
     // The unpack will automatically feed the message into the appropriate struct for parsing the data
-    // Conversion from CANMessage to uint8_t array for unpacking
+    // Conversion from CANBusMessage to uint8_t array for unpacking
     uint8_t data[8] = {msg.bytes[0], msg.bytes[1], msg.bytes[2], msg.bytes[3], msg.bytes[4], msg.bytes[5], msg.bytes[6], msg.bytes[7]};
     rms->second->unpack(data, msg.addr);
     return;
