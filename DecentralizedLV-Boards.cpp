@@ -128,7 +128,6 @@ void HVController_CAN::initialize(){
     motorTemperatureC = 0;
     inverterTemperatureC = 0;
     thermistorHighTempC = 0;
-    batteryFanPWM = 0;
 }
 
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
@@ -137,7 +136,7 @@ void HVController_CAN::sendCANData(CAN_Controller &controller){
     byte tx0 = Killswitch + (BMSFault << 1) + (dischargeContactorOn << 2) + (chargeContactorOn << 3) + (chargeSafetyOn << 4);
     uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
     uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
-    controller.CANSend(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, batteryFanPWM);
+    controller.CANSend(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, 0);
 
 }
 
@@ -160,8 +159,19 @@ void HVController_CAN::receiveCANData(LV_CANMessage msg){
         inverterTemperatureC = (float)(inverterTemperatureTemp / 10.0);                       //Convert to degrees C
 
         thermistorHighTempC = msg.byte6;
-        batteryFanPWM = msg.byte7;
+        // byte7 formerly carried batteryFanPWM (now computed on the front-left LPDRV board instead)
     }
+}
+
+/// @brief Maps the highest cell/pack temperature to a battery-box fan PWM value. Single source of
+///        truth for the ramp, shared by the front-left LPDRV (drives the fan) and the Power
+///        Controller (reports the level to the app).
+uint8_t battTempToPWM(float tempC){
+    if (tempC < BATT_FAN_TEMP_ON) return 0;
+    if (tempC >= BATT_FAN_TEMP_FULL) return 255;
+    float frac = (tempC - BATT_FAN_TEMP_ON) / (float)(BATT_FAN_TEMP_FULL - BATT_FAN_TEMP_ON);
+    uint16_t pwm = BATT_FAN_MIN_PWM + (uint16_t)(frac * (255 - BATT_FAN_MIN_PWM));
+    return (pwm > 255) ? 255 : (uint8_t)pwm;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -537,6 +547,8 @@ void AppController_CAN::initialize() {
     FullStart = false;
     driveMode = 0;
     occupantFanPWM = 0;
+    batteryFanOverride = false;   //Default OFF - battery fans follow temperature until the app explicitly overrides. Never persisted.
+    batteryFanManualPWM = 0;
     boardDetected = false;
 }
 
@@ -553,8 +565,10 @@ void AppController_CAN::sendCANData(CAN_Controller &controller) {
              | ((Ign ? 1 : 0) << 1)
              | ((FullStart ? 1 : 0) << 2);
     byte tx2 = driveMode;
-    byte tx3 = (usingAppControl ? 1 : 0) | ((runningLights ? 1 : 0) << 1);
-    controller.CANSend(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, 0, 0, 0);
+    byte tx3 = (usingAppControl ? 1 : 0)
+             | ((runningLights ? 1 : 0) << 1)
+             | ((batteryFanOverride ? 1 : 0) << 2);
+    controller.CANSend(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, batteryFanManualPWM, 0, 0);
 }
 
 void AppController_CAN::receiveCANData(LV_CANMessage msg) {
@@ -574,7 +588,9 @@ void AppController_CAN::receiveCANData(LV_CANMessage msg) {
         driveMode = msg.byte2;
         usingAppControl = msg.byte3 & 0x01;  // Extract the usingAppControl flag from byte3
         runningLights = (msg.byte3 >> 1) & 0x01;  // Extract the app-requested running lights preference from byte3
+        batteryFanOverride = (msg.byte3 >> 2) & 0x01;  // Extract the app-requested battery-fan manual override flag from byte3
         occupantFanPWM = msg.byte4;
+        batteryFanManualPWM = msg.byte5;  // Manual battery-fan speed to use while batteryFanOverride is set
     }
 }
 
