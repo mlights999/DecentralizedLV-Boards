@@ -3,6 +3,8 @@
 
 #include "Particle.h"
 #include <mcp_can.h>
+#include "API/CAN/CANMessage.h"
+#include "API/CAN/ICANController.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // MACROS FOR SYSTEM OPERATION
@@ -279,46 +281,8 @@
 
 
 
-/// @brief Generic CAN bus message with address and data fields.
-class LV_CANMessage{
-  public:
-  uint32_t addr = 0;        //CAN bus address of this message
-  uint8_t byte0 = 0;
-  uint8_t byte1 = 0;
-  uint8_t byte2 = 0;
-  uint8_t byte3 = 0;
-  uint8_t byte4 = 0;
-  uint8_t byte5 = 0;
-  uint8_t byte6 = 0;
-  uint8_t byte7 = 0;
-  void update(uint32_t Can_addr, byte data0, byte data1, byte data2, byte data3, byte data4, byte data5, byte data6, byte data7);
-};
-
 unsigned long convertBaudRateToParticle(unsigned long baudRate);
 unsigned long convertBaudRateToMCP(unsigned long baudRate);
-
-/// @brief Class to handle CAN bus controllers (either onboard on Photon or using the MCP2515 on P2/other microcontrollers).
-class CAN_Controller{
-    public:
-    void addFilter(uint32_t address);
-    bool receive(LV_CANMessage &outputMessage);
-    void CANSend(uint16_t Can_addr, byte data0, byte data1, byte data2, byte data3, byte data4, byte data5, byte data6, byte data7);
-    void CANSend(LV_CANMessage inputMessage);
-    void changeCANSpeed(uint32_t newCanSpeed);
-    uint32_t CurrentBaudRate();
-    void sleep();   // Put CAN controller into sleep mode for low power
-    void wake();    // Wake CAN controller from sleep mode
-    #if PLATFORM_ID == PLATFORM_PHOTON_PRODUCTION   //When running on a board with a photon, we'll use the internal controller, no need to specify chip select pin
-    void begin(unsigned long baudRate);
-    #else                                           //When running on a P2 or other, we need the MCP2515, which has a chip select pin you must specify.
-    void begin(unsigned long baudRate, uint8_t chipSelectPin);
-    #endif
-    private:
-    MCP_CAN *CAN0;
-    uint8_t filterIndex;
-    uint8_t csPin;
-    uint32_t currentBaudRate;
-};
 
 /// @brief Class to send data from Dash Controller OR to receive CAN data from the Dash Controller on other boards.
 class DashController_CAN{
@@ -344,8 +308,8 @@ class DashController_CAN{
 
     DashController_CAN(uint32_t boardAddr);
     void initialize();
-    void sendCANData(CAN_Controller &controller);
-    void receiveCANData(LV_CANMessage msg);
+    void sendCANData(ICANController &controller);
+    void receiveCANData(CANMessage msg);
     
 };
 
@@ -370,8 +334,8 @@ class PowerController_CAN{
 
     PowerController_CAN(uint32_t boardAddr);
     void initialize();
-    void sendCANData(CAN_Controller &controller);
-    void receiveCANData(LV_CANMessage msg);
+    void sendCANData(ICANController &controller);
+    void receiveCANData(CANMessage msg);
 
 };
 
@@ -383,8 +347,8 @@ class LPDRV_RearLeft_CAN{
     bool boardDetected;         //Flag set true in receiveCANData when a message from the Power Controller has been received. Use this on other boards to check if you're hearing from the Power Controller.
     LPDRV_RearLeft_CAN(uint32_t boardAddr);
     void initialize();
-    void sendCANData(CAN_Controller &controller);
-    void receiveCANData(LV_CANMessage msg);
+    void sendCANData(ICANController &controller);
+    void receiveCANData(CANMessage msg);
 };
 
 /// @brief Class to send data from Dash Controller to Camry Instrument Cluster.
@@ -395,9 +359,9 @@ class CamryCluster_CAN{
     uint32_t timer25ms;                 //Internal timer to keep track of 25ms packets
     uint32_t timer250ms;                //Internal timer to keep track of 250ms packets
     uint32_t timer1000ms;               //Internal timer to keep track of 1000ms packets
-    void send25msPackets(CAN_Controller &controller);       //Send all the packets needed every 25ms to the instrument cluster
-    void send250msPackets(CAN_Controller &controller);      //Send all the packets needed every 250ms to the instrument cluster
-    void send1000msPackets(CAN_Controller &controller);     //Send all the packets needed every 1000ms to the instrument cluster
+    void send25msPackets(ICANController &controller);       //Send all the packets needed every 25ms to the instrument cluster
+    void send250msPackets(ICANController &controller);      //Send all the packets needed every 250ms to the instrument cluster
+    void send1000msPackets(ICANController &controller);     //Send all the packets needed every 1000ms to the instrument cluster
 
     public:
     bool brakeIcon;                     //Set true to turn on red BRAKE text on instrument cluster, false to turn off. See spreadsheet linked in CamryCluster_CAN::sendCANData for details.
@@ -444,8 +408,8 @@ class CamryCluster_CAN{
     int outsideTemperatureF;            //Set the outside temperature in degrees F. Shows on the LCD.
 
     void initialize();
-    void sendCANData(CAN_Controller &controller);
-    //void receiveCANData(LV_CANMessage msg);
+    void sendCANData(ICANController &controller);
+    //void receiveCANData(CANMessage msg);
 };
 
 /// @brief Class to send data from HV Controller OR to receive CAN data from the HV Controller on other boards.
@@ -466,8 +430,8 @@ class HVController_CAN{
 
     HVController_CAN(uint32_t boardAddr);
     void initialize();
-    void sendCANData(CAN_Controller &controller);
-    void receiveCANData(LV_CANMessage msg);
+    void sendCANData(ICANController &controller);
+    void receiveCANData(CANMessage msg);
 
 };
 
@@ -481,8 +445,8 @@ class IBOOSTER_CAN{
 
     IBOOSTER_CAN(uint32_t boardAddr);
     void initialize();
-    //void sendCANData(CAN_Controller &controller); No controls yet
-    void receiveCANData(LV_CANMessage msg);
+    //void sendCANData(ICANController &controller); No controls yet
+    void receiveCANData(CANMessage msg);
 
 };
 
@@ -509,8 +473,8 @@ class AppController_CAN{
 
     AppController_CAN(uint32_t boardAddr);
     void initialize();
-    void sendCANData(CAN_Controller &controller);
-    void receiveCANData(LV_CANMessage msg);
+    void sendCANData(ICANController &controller);
+    void receiveCANData(CANMessage msg);
 };
 
 #endif
