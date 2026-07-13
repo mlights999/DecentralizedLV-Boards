@@ -44,7 +44,7 @@ void OrionBMS::initialize()
   j1772Received = false;           
 }
 
-void OrionBMS::sendPackStats(CAN_Controller &controller){
+void OrionBMS::sendPackStats(ICANController &controller){
   uint16_t packCurrentTemp = (uint16_t)(packRawAmps * 10);                  //Convert to 0.1A increments
   uint16_t packVoltageTemp = (uint16_t)(packInstantaneousVoltage * 10);         //Convert to 0.1V increments
   uint8_t packAmpHoursTemp = (uint8_t)(packAmpHours * 10);                      //Convert to 0.1Ah increments
@@ -52,40 +52,40 @@ void OrionBMS::sendPackStats(CAN_Controller &controller){
   uint8_t inputSupplyVoltageTemp = (uint8_t)(inputSupplyVoltage * 10);          //Convert to 0.1V increments
   uint8_t packSOCTemp = (uint8_t)packSOC;                                       //State of charge is already in 0-100% increments
 
-  controller.CANSend(packStatsAddr, 
+  controller.send(packStatsAddr, 
     (uint8_t)(packCurrentTemp >> 8), (uint8_t)(packCurrentTemp & 0xFF),
     (uint8_t)(packVoltageTemp >> 8), (uint8_t)(packVoltageTemp & 0xFF),
     packAmpHoursTemp, packResistanceTemp, packSOCTemp, inputSupplyVoltageTemp);
 }
 
-void OrionBMS::sendCellStatsDTC(CAN_Controller &controller){
+void OrionBMS::sendCellStatsDTC(ICANController &controller){
   uint8_t avgCellVoltageTemp = (uint8_t)(avgCellVoltage * 10);                  //Convert to 0.1V increments
   uint8_t highestCellVoltageTemp = (uint8_t)(highestCellVoltage * 10);          //Convert to 0.1V increments
   uint8_t lowestCellVoltageTemp = (uint8_t)(lowestCellVoltage * 10);            //Convert to 0.1V increments
   uint8_t lowestCellResistanceTemp = (uint8_t)(lowestCellResistanceOhms * 10);  //Convert to 0.1mOhm increments
 
-  controller.CANSend(cellStatsDTCAddr, 
+  controller.send(cellStatsDTCAddr, 
     avgCellVoltageTemp, highestCellVoltageTemp, lowestCellVoltageTemp, lowestCellResistanceTemp,
     (uint8_t)(dtcFlags1 >> 8), (uint8_t)(dtcFlags1 & 0xFF),
     (uint8_t)(dtcFlags2 >> 8), (uint8_t)(dtcFlags2 & 0xFF));
 }
 
-void OrionBMS::sendCurrentLimitAndTemp(CAN_Controller &controller){
+void OrionBMS::sendCurrentLimitAndTemp(ICANController &controller){
   uint16_t dischargeCurrentLimitTemp = (uint16_t)(dischargeCurrentLimit);       //Convert to 1A increments
   uint16_t chargeCurrentLimitTemp = (uint16_t)(chargeCurrentLimit);             //Convert to 1A increments
 
-  controller.CANSend(currentLimitTempAddr, 
+  controller.send(currentLimitTempAddr, 
     (uint8_t)(dischargeCurrentLimitTemp >> 8), (uint8_t)(dischargeCurrentLimitTemp & 0xFF),
     (uint8_t)(chargeCurrentLimitTemp >> 8), (uint8_t)(chargeCurrentLimitTemp & 0xFF),
     bmsAverageTempC, bmsInternalTempC, thermistorHighTempC, thermistorLowTempC);
 }
 
-void OrionBMS::sendJ1772Stats(CAN_Controller &controller){
-  controller.CANSend(j1772Addr, 
+void OrionBMS::sendJ1772Stats(ICANController &controller){
+  controller.send(j1772Addr, 
     (uint8_t)j1772PlugState, j1772ACCurrentLimit, j1772ACVoltage, (uint8_t)(relayState >> 8), (uint8_t)(relayState & 0xFF), 0, 0, 0);
 }
 
-void OrionBMS::sendCANData(CAN_Controller &controller)
+void OrionBMS::sendCANData(ICANController &controller)
 {
   sendPackStats(controller);            //Sends the pack statistics to the LV CAN Bus
   sendCellStatsDTC(controller);         //Sends the cell statistics and DTC error codes to the LV CAN Bus
@@ -93,19 +93,19 @@ void OrionBMS::sendCANData(CAN_Controller &controller)
   sendJ1772Stats(controller);           //Sends the J1772 charger status to the LV CAN Bus
 }
 
-void OrionBMS::receivePackStats(LV_CANMessage msg)
+void OrionBMS::receivePackStats(CANBusMessage msg)
 {
   if(msg.addr != packStatsAddr) return; //Ignore messages not meant for this address
 
-  uint16_t packCurrentTemp = (uint16_t)(msg.byte0 << 8 | msg.byte1);                  //Convert to 0.1A increments 
-  uint16_t packVoltageTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);                 //Convert to 0.1V increments
+  uint16_t packCurrentTemp = (uint16_t)(msg.bytes[0] << 8 | msg.bytes[1]);                  //Convert to 0.1A increments 
+  uint16_t packVoltageTemp = (uint16_t)(msg.bytes[2] << 8 | msg.bytes[3]);                 //Convert to 0.1V increments
 
   packRawAmps = (uint16_t)(packCurrentTemp / 10.0);                                     //Convert to amps
   packInstantaneousVoltage = (float)(packVoltageTemp / 10.0);                            //Convert to volts
-  packAmpHours = (float)(msg.byte4 / 10.0);                                              //Convert to amp hours
-  packResistanceOhms = (float)(msg.byte5 / 1000.0);                                      //Convert to ohms
-  packSOC = (uint8_t)msg.byte6;                                                          //State of charge is already in 0-100%
-  inputSupplyVoltage = (float)(msg.byte7 / 10.0);                                        //Convert to volts
+  packAmpHours = (float)(msg.bytes[4] / 10.0);                                              //Convert to amp hours
+  packResistanceOhms = (float)(msg.bytes[5] / 1000.0);                                      //Convert to ohms
+  packSOC = (uint8_t)msg.bytes[6];                                                          //State of charge is already in 0-100%
+  inputSupplyVoltage = (float)(msg.bytes[7] / 10.0);                                        //Convert to volts
 
   if(packCurrentTemp >= 32768) packCurrentAmps = (float)(65535 - packCurrentTemp) * -0.1f;
   else packCurrentAmps = (float)packCurrentTemp * 0.1f;
@@ -113,48 +113,48 @@ void OrionBMS::receivePackStats(LV_CANMessage msg)
   packStatsReceived = true;                                                              //Set the flag to true to indicate that pack stats have been received
 }
 
-void OrionBMS::receiveCellStatsDTC(LV_CANMessage msg)
+void OrionBMS::receiveCellStatsDTC(CANBusMessage msg)
 {
   if(msg.addr != cellStatsDTCAddr) return; //Ignore messages not meant for this address
 
-  avgCellVoltage = (float)(msg.byte0 / 10.0);                                            //Convert to volts
-  highestCellVoltage = (float)(msg.byte1 / 10.0);                                        //Convert to volts
-  lowestCellVoltage = (float)(msg.byte2 / 10.0);                                         //Convert to volts
-  lowestCellResistanceOhms = (float)(msg.byte3 / 10.0);                                  //Convert to ohms
-  dtcFlags1 = (uint16_t)(msg.byte4 << 8 | msg.byte5);                                   //Bit masks for error code type 1
-  dtcFlags2 = (uint16_t)(msg.byte6 << 8 | msg.byte7);                                   //Bit masks for error code type 2
+  avgCellVoltage = (float)(msg.bytes[0] / 10.0);                                            //Convert to volts
+  highestCellVoltage = (float)(msg.bytes[1] / 10.0);                                        //Convert to volts
+  lowestCellVoltage = (float)(msg.bytes[2] / 10.0);                                         //Convert to volts
+  lowestCellResistanceOhms = (float)(msg.bytes[3] / 10.0);                                  //Convert to ohms
+  dtcFlags1 = (uint16_t)(msg.bytes[4] << 8 | msg.bytes[5]);                                   //Bit masks for error code type 1
+  dtcFlags2 = (uint16_t)(msg.bytes[6] << 8 | msg.bytes[7]);                                   //Bit masks for error code type 2
 
   cellStatsDTCReceived = true;                                                           //Set the flag to true to indicate that cell stats and DTC have been received
 }
 
-void OrionBMS::receiveCurrentLimitAndTemp(LV_CANMessage msg)
+void OrionBMS::receiveCurrentLimitAndTemp(CANBusMessage msg)
 {
   if(msg.addr != currentLimitTempAddr) return; //Ignore messages not meant for this address
 
-  dischargeCurrentLimit = (uint16_t)(msg.byte0 << 8 | msg.byte1);                       //Convert to amps
-  chargeCurrentLimit = (uint16_t)(msg.byte2 << 8 | msg.byte3);                          //Convert to amps
-  bmsAverageTempC = (uint8_t)msg.byte4;                                                 //Average temperature of the BMS
-  bmsInternalTempC = (uint8_t)msg.byte5;                                                //Internal temperature of the BMS
-  thermistorHighTempC = (uint8_t)msg.byte6;                                             //Highest temperature of the thermistor expansion module
-  thermistorLowTempC = (uint8_t)msg.byte7;                                              //Lowest temperature of the thermistor expansion module
+  dischargeCurrentLimit = (uint16_t)(msg.bytes[0] << 8 | msg.bytes[1]);                       //Convert to amps
+  chargeCurrentLimit = (uint16_t)(msg.bytes[2] << 8 | msg.bytes[3]);                          //Convert to amps
+  bmsAverageTempC = (uint8_t)msg.bytes[4];                                                 //Average temperature of the BMS
+  bmsInternalTempC = (uint8_t)msg.bytes[5];                                                //Internal temperature of the BMS
+  thermistorHighTempC = (uint8_t)msg.bytes[6];                                             //Highest temperature of the thermistor expansion module
+  thermistorLowTempC = (uint8_t)msg.bytes[7];                                              //Lowest temperature of the thermistor expansion module
 
   currentLimitTempReceived = true;                                                       //Set the flag to true to indicate that current limits and temperatures have been received
 }
 
-void OrionBMS::receiveJ1772Stats(LV_CANMessage msg)
+void OrionBMS::receiveJ1772Stats(CANBusMessage msg)
 {
   if(msg.addr != j1772Addr) return; //Ignore messages not meant for this address
 
-  j1772PlugState = (bool)msg.byte0;                                                    //True if the J1772 plug is connected to the BMS
-  j1772ACCurrentLimit = (uint8_t)msg.byte1;                                            //AC current limit set by the J1772 plug, in amps
-  j1772ACVoltage = (uint8_t)msg.byte2;                                                 //AC voltage from the J1772 plug, in volts
+  j1772PlugState = (bool)msg.bytes[0];                                                    //True if the J1772 plug is connected to the BMS
+  j1772ACCurrentLimit = (uint8_t)msg.bytes[1];                                            //AC current limit set by the J1772 plug, in amps
+  j1772ACVoltage = (uint8_t)msg.bytes[2];                                                 //AC voltage from the J1772 plug, in volts
 
   j1772Received = true;                                                                //Set the flag to true to indicate that J1772 stats have been received
 
-  relayState = (msg.byte3 << 8) + msg.byte4;                                           //Bitmask for the contactor state from the Orion
+  relayState = (msg.bytes[3] << 8) + msg.bytes[4];                                           //Bitmask for the contactor state from the Orion
 }
 
-void OrionBMS::receiveCANData(LV_CANMessage msg)
+void OrionBMS::receiveCANData(CANBusMessage msg)
 {
   receivePackStats(msg);            //Receives the pack statistics from the board translating from the HV Bus and parses it into this object
   receiveCellStatsDTC(msg);         //Receives the cell statistics and DTC error codes from the board translating from the HV Bus and parses it into this object
@@ -162,16 +162,16 @@ void OrionBMS::receiveCANData(LV_CANMessage msg)
   receiveJ1772Stats(msg);           //Receives the J1772 charger status from the board translating from the HV Bus and parses it into this object
 }
 
-void OrionBMS::receiveHVCANData(LV_CANMessage msg)
+void OrionBMS::receiveHVCANData(CANBusMessage msg)
 {
   auto bms = bmscanmap.find(msg.addr);
 
   if (bms != bmscanmap.end()) {
     // Found the ID in the BMS CAN Map
     // The unpack will automatically feed the message into the appropriate struct for parsing the data
-    // Conversion from LV_CANMessage to uint8_t array for unpacking
+    // Conversion from CANBusMessage to uint8_t array for unpacking
     //Serial.printlnf("Found BMS ID: %X", msg.addr);
-    uint8_t data[8] = {msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7};
+    uint8_t data[8] = {msg.bytes[0], msg.bytes[1], msg.bytes[2], msg.bytes[3], msg.bytes[4], msg.bytes[5], msg.bytes[6], msg.bytes[7]};
     bms->second->unpack(data, msg.addr);
     return;
   }
@@ -243,58 +243,58 @@ void RMSController::initialize()
   faultsReceived = false;            //Flag indicating if fault codes have been received
 }
 
-void RMSController::sendPowerStats(CAN_Controller &controller)
+void RMSController::sendPowerStats(ICANController &controller)
 {
   uint16_t busVoltageTemp = (uint16_t)(busVoltage * 10);                    //Convert to 0.1V increments
   uint16_t busCurrentTemp = (uint16_t)(busCurrent * 10);                    //Convert to 0.1A increments
   uint16_t accessoryVoltageTemp = (uint16_t)(accessoryVoltage * 100);       //Convert to 0.01V increments
   uint16_t phACurrentTemp = (uint16_t)(rmsPhaseACurrent * 10);              //Convert to 0.1A increments
 
-  controller.CANSend(powerStatAddr, 
+  controller.send(powerStatAddr, 
     (uint8_t)(accessoryVoltageTemp >> 8), (uint8_t)(accessoryVoltageTemp & 0xFF),
     (uint8_t)(busVoltageTemp >> 8), (uint8_t)(busVoltageTemp & 0xFF),
     (uint8_t)(busCurrentTemp >> 8), (uint8_t)(busCurrentTemp & 0xFF), 
     (uint8_t)(phACurrentTemp >> 8), (uint8_t)(phACurrentTemp & 0xFF));       //Phase A current is already in 0.1A increments
 }
 
-void RMSController::sendMotorTemp(CAN_Controller &controller)
+void RMSController::sendMotorTemp(ICANController &controller)
 {
   uint16_t motorRPMTemp = (uint16_t)motorRPM;                                //Motor RPM is already in 1 RPM increments
   uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
   uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
   uint16_t commandedTorqueTemp = (uint16_t)(commandedTorque * 10);           //Convert to 0.1Nm increments
 
-  controller.CANSend(motorTempAddr, 
+  controller.send(motorTempAddr, 
     (uint8_t)(motorRPMTemp >> 8), (uint8_t)(motorRPMTemp & 0xFF),
     (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF),
     (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), 
     (uint8_t)(commandedTorqueTemp >> 8), (uint8_t)(commandedTorqueTemp & 0xFF));    //Commanded torque is already in Nm increments
 }
 
-void RMSController::sendFaults(CAN_Controller &controller)
+void RMSController::sendFaults(ICANController &controller)
 {
-  controller.CANSend(faultsAddr, 
+  controller.send(faultsAddr, 
     (uint8_t)(postFaultHigh >> 8), (uint8_t)(postFaultHigh & 0xFF),
     (uint8_t)(postFaultLow >> 8), (uint8_t)(postFaultLow & 0xFF),
     (uint8_t)(runFaultHigh >> 8), (uint8_t)(runFaultHigh & 0xFF), 
     (uint8_t)(runFaultLow >> 8), (uint8_t)(runFaultLow & 0xFF));       //Faults already in 1 increments
 }
 
-void RMSController::sendCANData(CAN_Controller &controller)
+void RMSController::sendCANData(ICANController &controller)
 {
   sendPowerStats(controller);            //Sends the power statistics to the LV CAN Bus
   sendMotorTemp(controller);              //Sends the motor statistics and inverter temperature to the LV CAN Bus
   sendFaults(controller);                 //Sends the fault codes to the LV CAN Bus
 }
 
-void RMSController::receivePowerStats(LV_CANMessage msg)
+void RMSController::receivePowerStats(CANBusMessage msg)
 {
   if (msg.addr != powerStatAddr) return; //Ignore messages not meant for this address
 
-  uint16_t accessoryVoltageTemp = (uint16_t)(msg.byte0 << 8 | msg.byte1);            //Convert to 0.01V increments
-  uint16_t busVoltageTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);                  //Convert to 0.1V increments
-  uint16_t busCurrentTemp = (uint16_t)(msg.byte4 << 8 | msg.byte5);                  //Convert to 0.1A increments
-  uint16_t phACurrentTemp = (uint16_t)(msg.byte6 << 8 | msg.byte7);                  //Convert to 0.1A increments
+  uint16_t accessoryVoltageTemp = (uint16_t)(msg.bytes[0] << 8 | msg.bytes[1]);            //Convert to 0.01V increments
+  uint16_t busVoltageTemp = (uint16_t)(msg.bytes[2] << 8 | msg.bytes[3]);                  //Convert to 0.1V increments
+  uint16_t busCurrentTemp = (uint16_t)(msg.bytes[4] << 8 | msg.bytes[5]);                  //Convert to 0.1A increments
+  uint16_t phACurrentTemp = (uint16_t)(msg.bytes[6] << 8 | msg.bytes[7]);                  //Convert to 0.1A increments
 
   accessoryVoltage = (float)(accessoryVoltageTemp / 100.0);                          //Convert to volts
   busVoltage = (float)(busVoltageTemp / 10.0);                                        //Convert to volts
@@ -304,14 +304,14 @@ void RMSController::receivePowerStats(LV_CANMessage msg)
   powerStatsReceived = true;                                                          //Set the flag to true to indicate that power stats have been received
 }
 
-void RMSController::receiveMotorTemp(LV_CANMessage msg)
+void RMSController::receiveMotorTemp(CANBusMessage msg)
 {
   if (msg.addr != motorTempAddr) return; //Ignore messages not meant for this address
 
-  uint16_t motorRPMTemp = (uint16_t)(msg.byte0 << 8 | msg.byte1);                    //Motor RPM is already in 1 RPM increments
-  uint16_t motorTemperatureTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);            //Convert to 0.1C increments
-  uint16_t inverterTemperatureTemp = (uint16_t)(msg.byte4 << 8 | msg.byte5);          //Convert to 0.1C increments
-  uint16_t commandedTorqueTemp = (uint16_t)(msg.byte6 << 8 | msg.byte7);             //Convert to 0.1Nm increments
+  uint16_t motorRPMTemp = (uint16_t)(msg.bytes[0] << 8 | msg.bytes[1]);                    //Motor RPM is already in 1 RPM increments
+  uint16_t motorTemperatureTemp = (uint16_t)(msg.bytes[2] << 8 | msg.bytes[3]);            //Convert to 0.1C increments
+  uint16_t inverterTemperatureTemp = (uint16_t)(msg.bytes[4] << 8 | msg.bytes[5]);          //Convert to 0.1C increments
+  uint16_t commandedTorqueTemp = (uint16_t)(msg.bytes[6] << 8 | msg.bytes[7]);             //Convert to 0.1Nm increments
 
   motorRPM = (uint16_t)motorRPMTemp;                                                 //Motor RPM is already in 1 RPM increments
   motorTemperatureC = (float)(motorTemperatureTemp / 10.0);                          //Convert to degrees C
@@ -321,14 +321,14 @@ void RMSController::receiveMotorTemp(LV_CANMessage msg)
   motorTempReceived = true;                                                           //Set the flag to true to indicate that motor temp has been received
 }
 
-void RMSController::receiveFaults(LV_CANMessage msg)
+void RMSController::receiveFaults(CANBusMessage msg)
 {
   if (msg.addr != faultsAddr) return; //Ignore messages not meant for this address
 
-  uint16_t postFaultHighTemp = (uint16_t)(msg.byte0 << 8 | msg.byte1);               //Post fault high code
-  uint16_t postFaultLowTemp = (uint16_t)(msg.byte2 << 8 | msg.byte3);                //Post fault low code
-  uint16_t runFaultHighTemp = (uint16_t)(msg.byte4 << 8 | msg.byte5);                 //Run fault high code
-  uint16_t runFaultLowTemp = (uint16_t)(msg.byte6 << 8 | msg.byte7);                  //Run fault low code
+  uint16_t postFaultHighTemp = (uint16_t)(msg.bytes[0] << 8 | msg.bytes[1]);               //Post fault high code
+  uint16_t postFaultLowTemp = (uint16_t)(msg.bytes[2] << 8 | msg.bytes[3]);                //Post fault low code
+  uint16_t runFaultHighTemp = (uint16_t)(msg.bytes[4] << 8 | msg.bytes[5]);                 //Run fault high code
+  uint16_t runFaultLowTemp = (uint16_t)(msg.bytes[6] << 8 | msg.bytes[7]);                  //Run fault low code
 
   postFaultHigh = (uint16_t)postFaultHighTemp;                                        //Post fault high code
   postFaultLow = (uint16_t)postFaultLowTemp;                                          //Post fault low code
@@ -338,14 +338,14 @@ void RMSController::receiveFaults(LV_CANMessage msg)
   faultsReceived = true;                                                              //Set the flag to true to indicate that faults have been received
 }
 
-void RMSController::receiveCANData(LV_CANMessage msg)
+void RMSController::receiveCANData(CANBusMessage msg)
 {
   receivePowerStats(msg);            //Receives the power statistics from the board translating from the HV Bus and parses it into this object
   receiveMotorTemp(msg);              //Receives the motor statistics and inverter temperature from the board translating from the HV Bus and parses it into this object
   receiveFaults(msg);                 //Receives the fault codes from the board translating from the HV Bus and parses it into this object
 }
 
-void RMSController::receiveHVCANData(LV_CANMessage msg)
+void RMSController::receiveHVCANData(CANBusMessage msg)
 {
 
   auto rms = rmscanmap.find(msg.addr);
@@ -353,8 +353,8 @@ void RMSController::receiveHVCANData(LV_CANMessage msg)
   {
     // Found the ID in the RMS CAN Map
     // The unpack will automatically feed the message into the appropriate struct for parsing the data
-    // Conversion from LV_CANMessage to uint8_t array for unpacking
-    uint8_t data[8] = {msg.byte0, msg.byte1, msg.byte2, msg.byte3, msg.byte4, msg.byte5, msg.byte6, msg.byte7};
+    // Conversion from CANBusMessage to uint8_t array for unpacking
+    uint8_t data[8] = {msg.bytes[0], msg.bytes[1], msg.bytes[2], msg.bytes[3], msg.bytes[4], msg.bytes[5], msg.bytes[6], msg.bytes[7]};
     rms->second->unpack(data, msg.addr);
     return;
   }
