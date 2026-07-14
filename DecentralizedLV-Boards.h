@@ -228,14 +228,14 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //HV Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
 #define HV_CONTROL_ADDR   0x130
-// byte 0: b0: Killswitch b1: BMSFault
-// byte 1: 
-// byte 2: 
-// byte 3: 
-// byte 4:
-// byte 5:
-// byte 6:
-// byte 7: 
+// byte 0: b0: Killswitch b1: BMSFault b2: dischargeContactorOn b3: chargeContactorOn b4: chargeSafetyOn
+// byte 1: packSOC
+// byte 2: motorTemperatureC (upper 8 bits, 0.1C increments)
+// byte 3: motorTemperatureC (lower 8 bits)
+// byte 4: inverterTemperatureC (upper 8 bits, 0.1C increments)
+// byte 5: inverterTemperatureC (lower 8 bits)
+// byte 6: thermistorHighTempC (hottest pack cell, degrees C) - front-left LPDRV ramps the battery-box fan from this
+// byte 7:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -270,11 +270,29 @@
 // byte 0: b0: leftTurnSignal, b1: rightTurnSignal, b2: headlight, b3: highbeam, b4: horn, b5: hazards, b6: stereo, b7: ipadCharger
 // byte 1: b0: Acc, b1: Ignition, b2: FullStart
 // byte 2: driveMode (see DRIVE_MODE_* macros)
-// byte 3: b0: usingAppControl, b1: runningLights (app-requested preference)
+// byte 3: b0: usingAppControl, b1: runningLights (app-requested preference), b2: batteryFanOverride
 // byte 4: occupantFanPWM
-// byte 5:
+// byte 5: batteryFanManualPWM (fan speed to use while batteryFanOverride is set)
 // byte 6:
 // byte 7:
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Battery-box cooling-fan temperature ramp.
+// The front-left LPDRV board (BDFL) drives the physical battery-box fan on LP6 from this ramp using
+// the hottest pack thermistor (HVController_CAN::thermistorHighTempC, received over CAN). The Power
+// Controller uses the same helper to report the fan level to the app. Kept here so there is one
+// single source of truth for the curve. NOTE: the app can override this for testing/validation via
+// AppController_CAN::batteryFanOverride - that override is never persisted.
+#define BATT_FAN_TEMP_ON     30      // deg C - fans begin spinning (lithium cells like to stay cool)
+#define BATT_FAN_TEMP_FULL   45      // deg C - fans at full speed
+#define BATT_FAN_MIN_PWM     60      // Minimum PWM once spinning, so fans reliably start (0-255)
+
+/// @brief Maps the highest cell/pack temperature to a battery-box fan PWM value.
+///        Returns 0 below BATT_FAN_TEMP_ON, ramps from BATT_FAN_MIN_PWM up to 255 between
+///        BATT_FAN_TEMP_ON and BATT_FAN_TEMP_FULL, then holds 255.
+/// @param tempC Highest cell/thermistor temperature in degrees Celsius.
+uint8_t battTempToPWM(float tempC);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -425,8 +443,7 @@ class HVController_CAN{
     uint8_t packSOC;                  //This is a copy from the OrionBMS packSOC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS.
     float motorTemperatureC;          //This is a copy from the RMS motorTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
     float inverterTemperatureC;       //This is a copy from the RMS inverterTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
-    uint8_t thermistorHighTempC;      //This is a copy from the OrionBMS thermistorHighTempC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS.
-    uint8_t batteryFanPWM;            //Battery-box fan speed the HV Controller is currently driving (0=off .. 255=max). Auto-set from the highest cell temperature. Read-only status for the app.
+    uint8_t thermistorHighTempC;      //This is a copy from the OrionBMS thermistorHighTempC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS. The front-left LPDRV board ramps the battery-box fan from this value (see battTempToPWM).
 
     HVController_CAN(uint32_t boardAddr);
     void initialize();
@@ -469,6 +486,8 @@ class AppController_CAN{
     bool FullStart;          //Full start state (ready to drive)
     uint8_t driveMode;       //Current drive mode (park, reverse, drive, sport, eco, etc.)
     uint8_t occupantFanPWM;  //Occupant-cell fan speed the app is requesting (0=off .. 255=max). Carried on byte4.
+    bool batteryFanOverride; //App-requested manual override of the battery-box fan. When true, the HV Controller ignores battery temperature and drives the fan at batteryFanManualPWM. TESTING/VALIDATION ONLY - never persisted, always defaults false on boot. Carried on byte3 bit2.
+    uint8_t batteryFanManualPWM; //Battery-box fan speed to drive while batteryFanOverride is true (0=off .. 255=max). Carried on byte5.
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);

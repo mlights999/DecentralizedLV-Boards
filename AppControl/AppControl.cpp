@@ -71,8 +71,11 @@ AppStatus::AppStatus() :
     faultActive(false),
     usingAppControl(false),
     occupantFanSpeed_App(0),
+    batteryFanOverride_App(false),      //Default OFF - never persisted, so a power cycle always restores temperature-based control
+    batteryFanManualSpeed_App(0),
     occupantFanSpeed_Current(0),
     batteryFanPWM(0),
+    batteryFanOverride_Current(false),
     odometerMiles(0.0)
 {
     // Initialize cell voltages array to 0
@@ -94,7 +97,9 @@ void AppStatus::copyFromHVController(const HVController_CAN& hv) {
     hvMotorTemperatureC = hv.motorTemperatureC;
     hvInverterTemperatureC = hv.inverterTemperatureC;
     hvThermistorHighTempC = hv.thermistorHighTempC;
-    batteryFanPWM = hv.batteryFanPWM;   // Battery-box fan level the HV Controller is driving (status only)
+    // batteryFanPWM (app status) is no longer sourced from the HV Controller - it's computed from the
+    // shared battTempToPWM ramp (or the manual override) in PowerController.ino, since the front-left
+    // LPDRV board now owns battery-fan control.
 }
 
 void AppStatus::copyFromOrionBMS(const OrionBMS& bms) {
@@ -197,6 +202,8 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("ign")) Ign_App = doc["ign"];
     if (doc.containsKey("fs")) FullStart_App = doc["fs"];
     if (doc.containsKey("ofan")) occupantFanSpeed_App = doc["ofan"];  // Occupant-cell fan speed (0-255)
+    if (doc.containsKey("bfo")) batteryFanOverride_App = doc["bfo"];  // Battery-box fan manual override (testing/validation only, never persisted)
+    if (doc.containsKey("bfm")) batteryFanManualSpeed_App = doc["bfm"];  // Battery-box fan manual speed (0-255) used while override is on
     return true;
 }
 
@@ -280,7 +287,7 @@ std::string AppStatus::toRMSJSON() const {
 }
 
 std::string AppStatus::toDashboardJSON() const {
-    StaticJsonDocument<320> doc;
+    StaticJsonDocument<384> doc;
     doc["type"] = "dash";
     // Send the actual current state (merged from manual and app controls)
     doc["lts"] = leftTurnSignal_Current;
@@ -297,7 +304,8 @@ std::string AppStatus::toDashboardJSON() const {
     doc["ign"] = Ign;       //FIX: was Ign_App
     doc["fs"] = FullStart;  //FIX: was FullStart_App
     doc["ofan"] = occupantFanSpeed_Current;  // Occupant-cell fan speed currently commanded (0-255)
-    doc["bfan"] = batteryFanPWM;             // Battery-box fan speed (auto, HV-controlled), status only (0-255)
+    doc["bfan"] = batteryFanPWM;             // Battery-box fan speed currently driven (0-255). Reflects the manual value while an override is active.
+    doc["bfo"] = batteryFanOverride_Current; // Battery-fan manual override state the car accepted (echo of the app's request). Non-persistent: always false after a power cycle.
     std::string output;
     serializeJson(doc, output);
     return output;
