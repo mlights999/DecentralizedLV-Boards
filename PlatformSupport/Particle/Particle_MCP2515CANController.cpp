@@ -7,7 +7,8 @@ Particle_MCP2515CANController::Particle_MCP2515CANController(uint8_t chipSelectP
 bool Particle_MCP2515CANController::begin(uint32_t busSpeed) {
     currentBaudRate = convertBaudRateToMCP(busSpeed);
     canController = new MCP_CAN(csPin);
-    if (!canController->begin(MCP_STDEXT, currentBaudRate, MCP_8MHZ)) {
+    const uint8_t initResult = canController->begin(MCP_STDEXT, currentBaudRate, MCP_8MHZ);
+    if (initResult != CAN_OK) {
         return false;
     }
     canController->setMode(MCP_NORMAL);
@@ -64,7 +65,7 @@ void Particle_MCP2515CANController::setBusSpeed(uint32_t newBusSpeed) {
         return;
     }
     currentBaudRate = convertBaudRateToMCP(newBusSpeed);
-    canController->begin(MCP_STDEXT, currentBaudRate, csPin);
+    canController->begin(MCP_STDEXT, currentBaudRate, MCP_8MHZ);
 }
 
 uint32_t Particle_MCP2515CANController::getBusSpeed() {
@@ -109,7 +110,8 @@ void Particle_MCP2515CANController::wake() {
 }
 
 uint32_t Particle_MCP2515CANController::convertBaudRateToMCP(uint32_t baudRate) {
-    switch (baudRate) {
+    if(baudRate > CAN_1000KBPS){   //Check if this is a MCP_CAN_RK baud rate     
+        switch (baudRate){
         case 1000000:
             return CAN_1000KBPS;
         case 500000:
@@ -125,6 +127,8 @@ uint32_t Particle_MCP2515CANController::convertBaudRateToMCP(uint32_t baudRate) 
         case 50000:
             return CAN_50KBPS;
         default:
-            return CAN_500KBPS;
+            return CAN_500KBPS;  //Use 500kbps CAN if using unrecognized macro
+        }
     }
+    return baudRate;            //If baudRate <= CAN_1000KBPS, then assumes we're already in MCP format
 }
