@@ -39,7 +39,7 @@ void DashController_CAN::initialize(){
 /// Encodes new fan PWM values into CAN message bytes
 void DashController_CAN::sendCANData(ICANController &controller){
     byte tx2 = frontLeftFan1PWM; // Front-Left Fan 1 PWM (byte 2)
-    byte tx4 = headlight + (highbeam << 1) + (runningLights << 2) + (reversePress << 5);
+    byte tx4 = headlight + (highbeam << 1) + (runningLights << 2) + (bmsFaultDetected << 3) + (rmsFaultDetected << 4) + (reversePress << 5);
     byte tx5 = frontLeftFan2PWM; // Front-Left Fan 2 PWM (byte 5)
     byte tx6 = driveMode;
     byte tx7 = (radiatorFanPWM ? 1 : 0) + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Radiator fan on/off (bit 0, only 1 bit available - see radiatorFanPWM comment); Front-Right Fan upper bits (bits 2-4 of byte 7)
@@ -59,6 +59,8 @@ void DashController_CAN::receiveCANData(CANBusMessage msg){
         headlight = msg.bytes[4] & 1;
         highbeam = (msg.bytes[4] >> 1) & 1;
         runningLights = (msg.bytes[4] >> 2) & 1;
+        bmsFaultDetected = (msg.bytes[4] >> 3) & 1;
+        rmsFaultDetected = (msg.bytes[4] >> 4) & 1;
         reversePress = (msg.bytes[4] >> 5) & 1;
         frontLeftFan2PWM = msg.bytes[5]; // Extract Front-Left Fan 2 from byte 5
         driveMode = msg.bytes[6];

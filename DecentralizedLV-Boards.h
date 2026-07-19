@@ -110,7 +110,7 @@
 // byte 0: Right Turn PWM 0-255
 // byte 1: Left Turn PWM 0-255
 // byte 2: animationTick
-// byte 4: b0:headlight b1:highbeam b2:runningLights b5:reversePress
+// byte 4: b0:headlight b1:highbeam b2:runningLights b3:bmsFaultDetected b4:rmsFaultDetected b5:reversePress
 // byte 5: Radiator Fan PWM 0-255
 // byte 6: Drive Mode: b0: Drive, b1: Sport, b2: Eco, b3: Reverse, b4: Neutral (BPS fault)
 // byte 7: Radiator pump
