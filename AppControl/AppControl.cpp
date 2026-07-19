@@ -44,6 +44,7 @@ AppStatus::AppStatus() :
     stereo_App(true),            //Default ON
     ipadCharger_App(true),       //Default ON
     runningLights_App(true),     //Default ON
+    eyesMode_App(false),         //Default OFF - never persisted, so a power cycle always restores normal lighting
     Acc_App(false),
     Ign_App(false),
     FullStart_App(false),
@@ -55,6 +56,7 @@ AppStatus::AppStatus() :
     stereo_Current(true),        //Default ON
     ipadCharger_Current(true),   //Default ON
     runningLights_Current(true), //Default ON
+    eyesMode_Current(false),     //Default OFF
     DriveMode(0),
     postFaultHigh(0),
     postFaultLow(0),
@@ -180,6 +182,7 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     stereo_Current = ac.stereo;           // App controlled
     ipadCharger_Current = ac.ipadCharger; // App controlled
     runningLights_Current = dc.runningLights; // Dash Controller is source of truth
+    eyesMode_Current = ac.eyesMode; // App-only preference, no manual/hardware source - echo straight through
     DriveMode = dc.driveMode;
 }
 
@@ -198,6 +201,7 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("st")) stereo_App = doc["st"];
     if (doc.containsKey("ic")) ipadCharger_App = doc["ic"];
     if (doc.containsKey("rl")) runningLights_App = doc["rl"];
+    if (doc.containsKey("em")) eyesMode_App = doc["em"];  // "Eyes" animation override (novelty feature, never persisted)
     if (doc.containsKey("acc")) Acc_App = doc["acc"];
     if (doc.containsKey("ign")) Ign_App = doc["ign"];
     if (doc.containsKey("fs")) FullStart_App = doc["fs"];
@@ -306,6 +310,7 @@ std::string AppStatus::toDashboardJSON() const {
     doc["ofan"] = occupantFanSpeed_Current;  // Occupant-cell fan speed currently commanded (0-255)
     doc["bfan"] = batteryFanPWM;             // Battery-box fan speed currently driven (0-255). Reflects the manual value while an override is active.
     doc["bfo"] = batteryFanOverride_Current; // Battery-fan manual override state the car accepted (echo of the app's request). Non-persistent: always false after a power cycle.
+    doc["em"] = eyesMode_Current;            // "Eyes" animation state the car accepted (echo of the app's request). Non-persistent: always false after a power cycle.
     std::string output;
     serializeJson(doc, output);
     return output;

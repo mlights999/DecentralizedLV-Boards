@@ -25,6 +25,7 @@ void DashController_CAN::initialize(){
     headlight = false;
     highbeam = false;
     runningLights = false;
+    eyesMode = false;    // Always defaults OFF on boot - never persisted, so a power cycle always turns the eyes animation off
     reversePress = false;
     driveMode = 0;
     radiatorFanPWM = 0;
@@ -39,7 +40,7 @@ void DashController_CAN::initialize(){
 /// Encodes new fan PWM values into CAN message bytes
 void DashController_CAN::sendCANData(ICANController &controller){
     byte tx2 = frontLeftFan1PWM; // Front-Left Fan 1 PWM (byte 2)
-    byte tx4 = headlight + (highbeam << 1) + (runningLights << 2) + (bmsFaultDetected << 3) + (rmsFaultDetected << 4) + (reversePress << 5);
+    byte tx4 = headlight + (highbeam << 1) + (runningLights << 2) + (bmsFaultDetected << 3) + (rmsFaultDetected << 4) + (reversePress << 5) + (eyesMode << 6);
     byte tx5 = frontLeftFan2PWM; // Front-Left Fan 2 PWM (byte 5)
     byte tx6 = driveMode;
     byte tx7 = (radiatorFanPWM ? 1 : 0) + (radiatorPump << 1) + ((frontRightFanPWM >> 5) << 2); // Radiator fan on/off (bit 0, only 1 bit available - see radiatorFanPWM comment); Front-Right Fan upper bits (bits 2-4 of byte 7)
@@ -62,6 +63,7 @@ void DashController_CAN::receiveCANData(CANBusMessage msg){
         bmsFaultDetected = (msg.bytes[4] >> 3) & 1;
         rmsFaultDetected = (msg.bytes[4] >> 4) & 1;
         reversePress = (msg.bytes[4] >> 5) & 1;
+        eyesMode = (msg.bytes[4] >> 6) & 1;
         frontLeftFan2PWM = msg.bytes[5]; // Extract Front-Left Fan 2 from byte 5
         driveMode = msg.bytes[6];
         radiatorFanPWM = (msg.bytes[7] & 1) ? 255 : 0; // Only 1 bit is transmitted (see radiatorFanPWM comment) - expand to full on/off
@@ -505,6 +507,7 @@ void AppController_CAN::initialize() {
     stereo = true;           //Default ON when flashed
     ipadCharger = true;      //Default ON when flashed
     runningLights = true;    //Default ON when flashed - Dash Controller's persisted preference overrides this after first boot
+    eyesMode = false;        //Default OFF - never persisted, so a power cycle always turns the eyes animation off
     Acc = false;
     Ign = false;
     FullStart = false;
@@ -530,7 +533,8 @@ void AppController_CAN::sendCANData(ICANController &controller) {
     byte tx2 = driveMode;
     byte tx3 = (usingAppControl ? 1 : 0)
              | ((runningLights ? 1 : 0) << 1)
-             | ((batteryFanOverride ? 1 : 0) << 2);
+             | ((batteryFanOverride ? 1 : 0) << 2)
+             | ((eyesMode ? 1 : 0) << 3);
     controller.send(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, batteryFanManualPWM, 0, 0);
 }
 
@@ -552,6 +556,7 @@ void AppController_CAN::receiveCANData(CANBusMessage msg) {
         usingAppControl = msg.bytes[3] & 0x01;  // Extract the usingAppControl flag from byte3
         runningLights = (msg.bytes[3] >> 1) & 0x01;  // Extract the app-requested running lights preference from byte3
         batteryFanOverride = (msg.bytes[3] >> 2) & 0x01;  // Extract the app-requested battery-fan manual override flag from byte3
+        eyesMode = (msg.bytes[3] >> 3) & 0x01;  // Extract the app-requested "eyes" animation override flag from byte3
         occupantFanPWM = msg.bytes[4];
         batteryFanManualPWM = msg.bytes[5];  // Manual battery-fan speed to use while batteryFanOverride is set
     }

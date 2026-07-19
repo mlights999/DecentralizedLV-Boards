@@ -110,7 +110,7 @@
 // byte 0: Right Turn PWM 0-255
 // byte 1: Left Turn PWM 0-255
 // byte 2: animationTick
-// byte 4: b0:headlight b1:highbeam b2:runningLights b3:bmsFaultDetected b4:rmsFaultDetected b5:reversePress
+// byte 4: b0:headlight b1:highbeam b2:runningLights b3:bmsFaultDetected b4:rmsFaultDetected b5:reversePress b6:eyesMode (app-toggled "eyes" animation override on BDFL - takes priority over all other front-grid output, never persisted)
 // byte 5: Radiator Fan PWM 0-255
 // byte 6: Drive Mode: b0: Drive, b1: Sport, b2: Eco, b3: Reverse, b4: Neutral (BPS fault)
 // byte 7: Radiator pump
@@ -270,7 +270,7 @@
 // byte 0: b0: leftTurnSignal, b1: rightTurnSignal, b2: headlight, b3: highbeam, b4: horn, b5: hazards, b6: stereo, b7: ipadCharger
 // byte 1: b0: Acc, b1: Ignition, b2: FullStart
 // byte 2: driveMode (see DRIVE_MODE_* macros)
-// byte 3: b0: usingAppControl, b1: runningLights (app-requested preference), b2: batteryFanOverride
+// byte 3: b0: usingAppControl, b1: runningLights (app-requested preference), b2: batteryFanOverride, b3: eyesMode ("eyes" animation override, never persisted)
 // byte 4: occupantFanPWM
 // byte 5: batteryFanManualPWM (fan speed to use while batteryFanOverride is set)
 // byte 6:
@@ -315,6 +315,7 @@ class DashController_CAN{
     bool headlight;             //Toggle switch for the car headlights. True turns on headlights, false turns off headlights.
     bool highbeam;              //Toggle switch for the car highbeams. True turns on highbeams, false turns off highbeams.
     bool runningLights;         //Final running-lights output state (app-toggleable preference ANDed with car power state). Drive corner board outputs from this.
+    bool eyesMode;              //App-toggled "eyes" animation override for the front matrix headlights (BDFL). When true, BDFL renders the eyes animation instead of headlight/highbeam/running-light/blinker output - eyes take full priority. App-only preference, never persisted: always defaults false on boot. Carried on Dash frame byte4 bit6.
     bool reversePress;          //Toggle switch for being in reverse mode. Use to turn on/off reverse lights, backup camera, etc.
     byte driveMode;             //The gear that the user has requested (Park, Reverse, Forward, ...). Use the macros like DRIVE_MODE_PARK, DRIVE_MODE_NORMAL, etc.
     byte radiatorFanPWM;           //Cooling fan for the motor controller. NOTE: byte7 on the wire only has 1 free bit for this, so sendCANData/receiveCANData only transmit it as on/off (0 or 255), not true PWM.
@@ -481,6 +482,7 @@ class AppController_CAN{
     bool stereo;             //Stereo power state (default ON)
     bool ipadCharger;        //iPad/Cigarette lighter charger power state (default ON)
     bool runningLights;      //App-requested running lights preference (on/off). Dash Controller persists this and ANDs it with car power state.
+    bool eyesMode;           //App-toggled "eyes" animation override for the front matrix headlights. TESTING/NOVELTY FEATURE - never persisted, always defaults false on boot. Carried on byte3 bit3.
     bool Acc;                //Accessory state
     bool Ign;                //Ignition state
     bool FullStart;          //Full start state (ready to drive)
