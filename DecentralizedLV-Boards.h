@@ -481,6 +481,9 @@ class AppController_CAN{
     bool hazards;            //Hazard lights state
     bool stereo;             //Stereo power state (default ON)
     bool ipadCharger;        //iPad/Cigarette lighter charger power state (default ON)
+    bool telemetry;          //Telemetry radio power state (default ON). App-toggleable low-power output on the Dash Controller. Carried on App frame byte1 bit3.
+    bool radio;              //Ham/comms radio power state (default ON). App-toggleable low-power output on the Dash Controller. Carried on App frame byte1 bit4.
+    bool wiper;              //Windshield wiper power state (default OFF). App-toggleable low-power output on the Dash Controller. Carried on App frame byte1 bit5.
     bool runningLights;      //App-requested running lights preference (on/off). Dash Controller persists this and ANDs it with car power state.
     bool eyesMode;           //App-toggled "eyes" animation override for the front matrix headlights. TESTING/NOVELTY FEATURE - never persisted, always defaults false on boot. Carried on byte3 bit3.
     bool Acc;                //Accessory state

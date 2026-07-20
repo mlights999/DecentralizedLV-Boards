@@ -82,6 +82,9 @@ public:
     bool horn_App;
     bool stereo_App;         // Stereo state set by app (default ON)
     bool ipadCharger_App;    // iPad charger state set by app (default ON)
+    bool telemetry_App;      // Telemetry radio power set by app (default ON). Parsed from JSON key "tel".
+    bool radio_App;          // Ham/comms radio power set by app (default ON). Parsed from JSON key "rad".
+    bool wiper_App;          // Windshield wiper power set by app (default OFF). Parsed from JSON key "wip".
     bool runningLights_App;  // Running lights preference set by app (default ON). Dash Controller persists this across reboots.
     bool eyesMode_App;      // "Eyes" animation override requested by the app. Parsed from JSON key "em". NOVELTY FEATURE - never persisted, always defaults false on boot so a power cycle always turns it off. Takes priority over all other front-grid lighting on BDFL while true.
     bool Acc_App;
@@ -99,6 +102,9 @@ public:
     bool horn_Current;
     bool stereo_Current;        // Current stereo state
     bool ipadCharger_Current;   // Current iPad charger state
+    bool telemetry_Current;     // Current telemetry radio state, echoed back to the app (JSON key "tel")
+    bool radio_Current;         // Current ham/comms radio state, echoed back to the app (JSON key "rad")
+    bool wiper_Current;         // Current windshield wiper state, echoed back to the app (JSON key "wip")
     bool runningLights_Current; // Current running lights state, as reported by the Dash Controller (source of truth)
     bool eyesMode_Current;      // "Eyes" animation state the car actually accepted, echoed back to the app (JSON key "em") so the toggle reflects what's really happening. Non-persistent: always false after a power cycle.
     uint8_t DriveMode;          // Current drive mode

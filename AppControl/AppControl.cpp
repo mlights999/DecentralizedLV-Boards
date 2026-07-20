@@ -43,6 +43,9 @@ AppStatus::AppStatus() :
     horn_App(false),
     stereo_App(true),            //Default ON
     ipadCharger_App(true),       //Default ON
+    telemetry_App(true),         //Default ON
+    radio_App(true),             //Default ON
+    wiper_App(false),            //Default OFF - wipers should never run on boot
     runningLights_App(true),     //Default ON
     eyesMode_App(false),         //Default OFF - never persisted, so a power cycle always restores normal lighting
     Acc_App(false),
@@ -55,6 +58,9 @@ AppStatus::AppStatus() :
     horn_Current(false),
     stereo_Current(true),        //Default ON
     ipadCharger_Current(true),   //Default ON
+    telemetry_Current(true),     //Default ON
+    radio_Current(true),         //Default ON
+    wiper_Current(false),        //Default OFF
     runningLights_Current(true), //Default ON
     eyesMode_Current(false),     //Default OFF
     DriveMode(0),
@@ -181,6 +187,9 @@ void AppStatus::mergeControlStates(const DashController_CAN& dc, const AppContro
     horn_Current = ac.horn || horn;  //FIX: was horn_Current (self-reference, latched on forever). Use hardware horn state from PowerController.
     stereo_Current = ac.stereo;           // App controlled
     ipadCharger_Current = ac.ipadCharger; // App controlled
+    telemetry_Current = ac.telemetry;     // App controlled
+    radio_Current = ac.radio;             // App controlled
+    wiper_Current = ac.wiper;             // App controlled
     runningLights_Current = dc.runningLights; // Dash Controller is source of truth
     eyesMode_Current = ac.eyesMode; // App-only preference, no manual/hardware source - echo straight through
     DriveMode = dc.driveMode;
@@ -200,6 +209,9 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("hn")) horn_App = doc["hn"];
     if (doc.containsKey("st")) stereo_App = doc["st"];
     if (doc.containsKey("ic")) ipadCharger_App = doc["ic"];
+    if (doc.containsKey("tel")) telemetry_App = doc["tel"];  // Telemetry radio power
+    if (doc.containsKey("rad")) radio_App = doc["rad"];      // Ham/comms radio power
+    if (doc.containsKey("wip")) wiper_App = doc["wip"];      // Windshield wiper power
     if (doc.containsKey("rl")) runningLights_App = doc["rl"];
     if (doc.containsKey("em")) eyesMode_App = doc["em"];  // "Eyes" animation override (novelty feature, never persisted)
     if (doc.containsKey("acc")) Acc_App = doc["acc"];
@@ -301,6 +313,9 @@ std::string AppStatus::toDashboardJSON() const {
     doc["hn"] = horn_Current;
     doc["st"] = stereo_Current;
     doc["ic"] = ipadCharger_Current;
+    doc["tel"] = telemetry_Current;  // Telemetry radio state the car accepted (echo of the app's request)
+    doc["rad"] = radio_Current;      // Ham/comms radio state the car accepted (echo of the app's request)
+    doc["wip"] = wiper_Current;      // Windshield wiper state the car accepted (echo of the app's request)
     doc["rl"] = runningLights_Current;      // Actual running-lights output as reported by the Dash (preference AND car-powered)
     doc["rla"] = runningLights_App;         // DEBUG: running-lights value this gateway last received from the app (before Dash gating). If "rla" tracks the toggle but "rl" doesn't, the break is on the Dash (usingAppControl / car-power gate), not the app link.
     doc["dm"] = DriveMode;  // Include drive mode so app can display gear

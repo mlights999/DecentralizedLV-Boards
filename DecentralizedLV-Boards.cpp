@@ -506,6 +506,9 @@ void AppController_CAN::initialize() {
     hazards = false;
     stereo = true;           //Default ON when flashed
     ipadCharger = true;      //Default ON when flashed
+    telemetry = true;        //Default ON when flashed
+    radio = true;            //Default ON when flashed
+    wiper = false;           //Default OFF when flashed - wipers should never run on boot
     runningLights = true;    //Default ON when flashed - Dash Controller's persisted preference overrides this after first boot
     eyesMode = false;        //Default OFF - never persisted, so a power cycle always turns the eyes animation off
     Acc = false;
@@ -529,7 +532,10 @@ void AppController_CAN::sendCANData(ICANController &controller) {
              | ((ipadCharger ? 1 : 0) << 7);
     byte tx1 = (Acc ? 1 : 0)
              | ((Ign ? 1 : 0) << 1)
-             | ((FullStart ? 1 : 0) << 2);
+             | ((FullStart ? 1 : 0) << 2)
+             | ((telemetry ? 1 : 0) << 3)
+             | ((radio ? 1 : 0) << 4)
+             | ((wiper ? 1 : 0) << 5);
     byte tx2 = driveMode;
     byte tx3 = (usingAppControl ? 1 : 0)
              | ((runningLights ? 1 : 0) << 1)
@@ -552,6 +558,9 @@ void AppController_CAN::receiveCANData(CANBusMessage msg) {
         Acc = msg.bytes[1] & 0x01;
         Ign = (msg.bytes[1] >> 1) & 0x01;
         FullStart = (msg.bytes[1] >> 2) & 0x01;
+        telemetry = (msg.bytes[1] >> 3) & 0x01;  //App-toggled telemetry radio power
+        radio = (msg.bytes[1] >> 4) & 0x01;       //App-toggled ham/comms radio power
+        wiper = (msg.bytes[1] >> 5) & 0x01;       //App-toggled windshield wiper power
         driveMode = msg.bytes[2];
         usingAppControl = msg.bytes[3] & 0x01;  // Extract the usingAppControl flag from byte3
         runningLights = (msg.bytes[3] >> 1) & 0x01;  // Extract the app-requested running lights preference from byte3
