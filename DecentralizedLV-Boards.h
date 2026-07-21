@@ -17,6 +17,44 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
+// FAULT NETWORK
+// Single, shared definition of the car-wide fault model. A fault is defined once here, at the CAN
+// layer, and flows unchanged through every hop (CAN -> BLE -> iPad -> cellular -> server -> pit web).
+// Every board sets its own fault bits; the Power Controller aggregates them and forwards to the app.
+//
+// Severity drives how a fault is surfaced (lights/sounds on the car, banner colour in the app/pit).
+#define FAULT_SEV_NONE      0   // no fault
+#define FAULT_SEV_INFO      1   // informational state, not a problem (e.g. charging active)
+#define FAULT_SEV_CAUTION   2   // advisory - worth noting, not urgent
+#define FAULT_SEV_WARNING   3   // degraded - needs attention soon
+#define FAULT_SEV_CRITICAL  4   // safety/shutdown - immediate attention
+
+// Board / subsystem identifiers. Also used as the heartbeat board ID and as the fault "source".
+// Keep in sync with the app's board list (AppStatus::boardStatus order) when adding entries.
+#define BOARD_ID_POWER      0
+#define BOARD_ID_DASH       1
+#define BOARD_ID_HV         2
+#define BOARD_ID_IBOOSTER   3
+#define BOARD_ID_BMS        4
+#define BOARD_ID_RMS        5
+#define BOARD_ID_LPDRV_FL   6   // front-left corner driver (BDFL)
+#define BOARD_ID_LPDRV_FR   7   // front-right corner driver (BDFR)
+#define BOARD_ID_LPDRV_RL   8   // rear-left corner driver (BDRL)
+#define BOARD_ID_LPDRV_RR   9   // rear-right corner driver (BDRR)
+#define BOARD_COUNT         10
+
+// Board liveness state (matches the app's boardStatus encoding).
+#define BOARD_STATE_OFF     0   // not powered / not expected
+#define BOARD_STATE_ONLINE  1   // heartbeat received within the timeout window
+#define BOARD_STATE_FAULT   2   // expected but silent past BOARD_ONLINE_TIMEOUT_MS
+
+// How long a board may go silent before it is flagged as a fault (ms).
+#define BOARD_ONLINE_TIMEOUT_MS   1000
+// How often boards without another periodic frame should emit their heartbeat (ms).
+#define BOARD_HEARTBEAT_PERIOD_MS 200
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
 // MACROS FOR CAMRY CLUSTER
 
 //LCD Power sequence prompts
@@ -179,9 +217,9 @@
 // byte 0: J1772 charger connected
 // byte 1: J1772 Charger Current Limit (1V increments)
 // byte 2: J1772 AC Charger Voltage (1V increments)
-// byte 3: 
-// byte 4:
-// byte 5: 
+// byte 3: relayState (upper 8 bits) - Orion contactor/relay bitmask
+// byte 4: relayState (lower 8 bits)
+// byte 5: failsafeStatuses - Orion failsafe bitmask (b0 voltage, b1 current, b2 relay, b3 cell balancing)
 // byte 6:
 // byte 7:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -228,27 +266,44 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //HV Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
 #define HV_CONTROL_ADDR   0x130
-// byte 0: b0: Killswitch b1: BMSFault b2: dischargeContactorOn b3: chargeContactorOn b4: chargeSafetyOn
+// byte 0: b0: Killswitch b1: BMSFault b2: dischargeContactorOn b3: chargeContactorOn b4: chargeSafetyOn b5: rmsFaultActive b6: contactorMismatch
 // byte 1: packSOC
 // byte 2: motorTemperatureC (upper 8 bits, 0.1C increments)
 // byte 3: motorTemperatureC (lower 8 bits)
 // byte 4: inverterTemperatureC (upper 8 bits, 0.1C increments)
 // byte 5: inverterTemperatureC (lower 8 bits)
 // byte 6: thermistorHighTempC (hottest pack cell, degrees C) - front-left LPDRV ramps the battery-box fan from this
+// byte 7: bmsFailsafe (Orion failsafe bitmask passthrough: b0 voltage, b1 current, b2 relay, b3 cell balancing)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//Rear-Left LPDRV (corner driver) CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
+#define REAR_LEFT_DRIVER   0x95
+// byte 0: bmsFaultInput (rear-left reads the BMS fault line)
+// byte 1: switchFaultInput (rear-left reads the manual kill-switch fault line)
+// byte 2:
+// byte 3:
+// byte 4:
+// byte 5:
+// byte 6:
 // byte 7:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-//Power Controller CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
-#define REAR_LEFT_DRIVER   0x95
-// byte 0: 
-// byte 1: 
-// byte 2: 
-// byte 3: 
-// byte 4:
+// Corner LPDRV heartbeat/fault frames. The three corner boards that historically transmitted nothing
+// (front-left, front-right, rear-right) now each emit a heartbeat on their own address so the Power
+// Controller can monitor their liveness like every other board. Same byte layout for all three.
+#define FRONT_LEFT_DRIVER    0x96
+#define FRONT_RIGHT_DRIVER   0x97
+#define REAR_RIGHT_DRIVER    0x98
+// byte 0: board ID (BOARD_ID_LPDRV_FL / _FR / _RR) so the receiver knows which corner spoke
+// byte 1: local fault severity summary (FAULT_SEV_*)
+// byte 2: output fault bitmap low  (per-output open-load/short flags; 0 until sense hardware exists)
+// byte 3: output fault bitmap high
+// byte 4: b0 bmsFaultInput, b1 switchFaultInput (from IP pins where wired; 0 otherwise)
 // byte 5:
 // byte 6:
-// byte 7: 
+// byte 7:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -370,6 +425,28 @@ class LPDRV_RearLeft_CAN{
     void receiveCANData(CANBusMessage msg);
 };
 
+/// @brief Heartbeat/fault frame for the corner LPDRV boards that otherwise transmit nothing
+///        (front-left, front-right, rear-right). Each corner constructs one with its own board
+///        address (FRONT_LEFT_DRIVER / FRONT_RIGHT_DRIVER / REAR_RIGHT_DRIVER) and board ID, and
+///        calls sendCANData periodically (every BOARD_HEARTBEAT_PERIOD_MS) so the Power Controller
+///        can track its liveness. The Power Controller constructs one per corner (with matching
+///        address) and calls receiveCANData to read the fault fields back off the bus.
+class LPDRVCorner_CAN{
+    public:
+    uint32_t boardAddress;      //CAN address this corner runs at (FRONT_LEFT_DRIVER / FRONT_RIGHT_DRIVER / REAR_RIGHT_DRIVER)
+    uint8_t boardID;            //Which corner this is (BOARD_ID_LPDRV_FL / _FR / _RR)
+    uint8_t faultSeverity;      //Local fault severity summary (FAULT_SEV_*). Highest active local fault.
+    uint16_t outputFaultBitmap; //Per-output open-load/short flags. 0 until sense hardware exists.
+    bool bmsFaultInput;         //BMS fault line read from an IP pin (0 if not wired on this corner).
+    bool switchFaultInput;      //Kill-switch fault line read from an IP pin (0 if not wired on this corner).
+    bool boardDetected;         //Set true in receiveCANData when this corner's heartbeat has been heard.
+
+    LPDRVCorner_CAN(uint32_t boardAddr, uint8_t id);
+    void initialize();
+    void sendCANData(ICANController &controller);
+    void receiveCANData(CANBusMessage msg);
+};
+
 /// @brief Class to send data from Dash Controller to Camry Instrument Cluster.
 class CamryCluster_CAN{
     private:
@@ -441,6 +518,9 @@ class HVController_CAN{
     bool dischargeContactorOn;        //Reads from the Orion CANBUS to determine if the discharge contactor is enabled
     bool chargeContactorOn;           //Reads from the Orion CANBUS to determine if the charge contactor is enabled
     bool chargeSafetyOn;              //Reads from the Orion CANBUS to determine if the charge safety contactor is enabled
+    bool rmsFaultActive;              //Rolled-up motor-controller (RMS) fault flag, so consumers of 0x130 get one fault bit without decoding 0x118. Carried on byte0 bit5.
+    bool contactorMismatch;           //True when a contactor the HV Controller commanded does not match the Orion's reported relay state (stuck/failed contactor). Carried on byte0 bit6.
+    uint8_t bmsFailsafe;              //Orion failsafe status bitmask passthrough (see failsafeStatuses). Carried on byte7 so 0x130 consumers see it without decoding 0x115.
     uint8_t packSOC;                  //This is a copy from the OrionBMS packSOC field. Putting this here so you only need the HVController to see this stat and not all of OrionBMS.
     float motorTemperatureC;          //This is a copy from the RMS motorTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.
     float inverterTemperatureC;       //This is a copy from the RMS inverterTemperatureC field. Putting this here so you only need the HVController to see this stat and not all of RMSController.

@@ -28,6 +28,7 @@ void OrionBMS::initialize()
   lowestCellResistanceOhms = 0.0;            //Resistance of the lowest cell in the pack (calculated by the BMS)
   dtcFlags1 = 0;                             //Bit masks for error code type 1. See the Orion BMS manual for which bits represent which errors.
   dtcFlags2 = 0;                             //Bit masks for error code type 2. See the Orion BMS manual for which bits represent which errors.
+  failsafeStatuses = 0;                      //Orion failsafe status bitmask (voltage/current/relay failsafe, cell balancing).
   dischargeCurrentLimit = 0;                 //Discharge current limit in amps, set by the Orion BMS. This is the maximum discharge current that can be sent from the pack.
   chargeCurrentLimit = 0;                    //Charge current limit in amps, set by the Orion BMS. This is the maximum charge current that can be sent to the pack.
   bmsAverageTempC = 0;                       //Average temperature of the thermistors on the BMS itself (not expansion)
@@ -85,7 +86,7 @@ void OrionBMS::sendCurrentLimitAndTemp(ICANController &controller){
 
 void OrionBMS::sendJ1772Stats(ICANController &controller){
   controller.send(j1772Addr,
-    (uint8_t)j1772PlugState, j1772ACCurrentLimit, j1772ACVoltage, (uint8_t)(relayState >> 8), (uint8_t)(relayState & 0xFF), 0, 0, 0);
+    (uint8_t)j1772PlugState, j1772ACCurrentLimit, j1772ACVoltage, (uint8_t)(relayState >> 8), (uint8_t)(relayState & 0xFF), failsafeStatuses, 0, 0);
 }
 
 void OrionBMS::sendCellVoltages(ICANController &controller)
@@ -193,6 +194,7 @@ void OrionBMS::receiveJ1772Stats(CANBusMessage msg)
   j1772Received = true;                                                                //Set the flag to true to indicate that J1772 stats have been received
 
   relayState = (msg.bytes[3] << 8) + msg.bytes[4];                                           //Bitmask for the contactor state from the Orion
+  failsafeStatuses = (uint8_t)msg.bytes[5];                                                  //Orion failsafe status bitmask (voltage/current/relay failsafe, cell balancing)
 }
 
 void OrionBMS::receiveCellBroadcast(CANBusMessage msg)
@@ -305,6 +307,7 @@ void OrionBMS::receiveHVCANData(CANBusMessage msg)
   bmsInternalTempC = (uint8_t)dbc_bms_msgid_0_x6_b3.internal_temperature_decode();      //1 byte
   thermistorHighTempC = (uint8_t)dbc_bms_msgid_0_x6_b1.high_temperature_decode();       //1 byte
   thermistorLowTempC = (uint8_t)dbc_bms_msgid_0_x6_b1.low_temperature_decode();         //1 byte
+  failsafeStatuses = (uint8_t)dbc_bms_msgid_0_x6_b1.failsafe_statuses_decode();         //1 byte - now forwarded on the J1772 frame (0x115 byte5)
 
   relayState = dbc_bms_msgid_0_x6_b0.relay_state_decode();                              //2 bytes
 

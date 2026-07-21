@@ -114,6 +114,8 @@ class OrionBMS {
     //https://www.orionbms.com/manuals/utility_o2/bms_param_dtc_status_1.html
     uint16_t dtcFlags1;         //Bit masks for error code type 1. See the Orion BMS manual for which bits represent which errors.
     uint16_t dtcFlags2;         //Bit masks for error code type 2. See the Orion BMS manual for which bits represent which errors.
+    //https://www.orionbms.com/manuals/utility_jr/bms_param_bms_status.html
+    uint8_t failsafeStatuses;   //Orion failsafe status bitmask: b0 voltage failsafe, b1 current failsafe, b2 relay failsafe, b3 cell balancing active. Previously decoded but dropped - now forwarded on the J1772 frame.
 
     bool packStatsReceived;         //Flag set true in receiveCANData when a message from the Orion has been received. Use this on other boards to check if you're hearing from the Orion.
     bool cellStatsDTCReceived;      //Flag set true in receiveCANData when a message from the Orion has been received. Use this on other boards to check if you're hearing from the Orion.

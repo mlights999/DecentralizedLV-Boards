@@ -90,6 +90,10 @@ AppStatus::AppStatus() :
     for(int i = 0; i < 180; i++) {
         cellVoltages[i] = 0.0f;
     }
+    // Initialize per-board CAN health to 0 (off / not yet heard)
+    for(uint8_t i = 0; i < BOARD_STATUS_COUNT; i++) {
+        boardStatus[i] = 0;
+    }
 }
 
 // Removed duplicate earlier definition. Implementation below updates telemetry fields.
@@ -224,7 +228,7 @@ bool AppStatus::fromJSON(const std::string& json) {
 }
 
 std::string AppStatus::toPowerControllerJSON() const {
-    StaticJsonDocument<192> doc;
+    StaticJsonDocument<256> doc;
     doc["type"] = "pc";
     doc["acc"] = Acc;
     doc["ign"] = Ign;
@@ -232,6 +236,11 @@ std::string AppStatus::toPowerControllerJSON() const {
     doc["hn"] = horn_Current;
     doc["uac"] = usingAppControl;
     doc["odo"] = (double)((long)(odometerMiles * 10)) / 10.0;  // miles, 1 decimal
+    // Per-board CAN health: [Power, Dash, HV, iBooster, BMS, RMS] (0=off, 1=online, 2=fault)
+    JsonArray bs = doc.createNestedArray("bs");
+    for(uint8_t i = 0; i < BOARD_STATUS_COUNT; i++) {
+        bs.add(boardStatus[i]);
+    }
     std::string output;
     serializeJson(doc, output);
     return output;

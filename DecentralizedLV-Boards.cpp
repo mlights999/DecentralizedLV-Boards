@@ -91,6 +91,9 @@ void HVController_CAN::initialize(){
     dischargeContactorOn = false;
     chargeContactorOn = false;
     chargeSafetyOn = false;
+    rmsFaultActive = false;
+    contactorMismatch = false;
+    bmsFailsafe = 0;
     motorTemperatureC = 0;
     inverterTemperatureC = 0;
     thermistorHighTempC = 0;
@@ -99,10 +102,10 @@ void HVController_CAN::initialize(){
 /// @brief Takes the variables that you've previously updated and sends them out in the agreed CAN bus format for this board.
 /// @param controller The CAN bus controller attached to this microcontroller.
 void HVController_CAN::sendCANData(ICANController &controller){
-    byte tx0 = Killswitch + (BMSFault << 1) + (dischargeContactorOn << 2) + (chargeContactorOn << 3) + (chargeSafetyOn << 4);
+    byte tx0 = Killswitch + (BMSFault << 1) + (dischargeContactorOn << 2) + (chargeContactorOn << 3) + (chargeSafetyOn << 4) + (rmsFaultActive << 5) + (contactorMismatch << 6);
     uint16_t motorTemperatureTemp = (uint16_t)(motorTemperatureC * 10);        //Convert to 0.1C increments
     uint16_t inverterTemperatureTemp = (uint16_t)(inverterTemperatureC * 10);  //Convert to 0.1C increments
-    controller.send(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, 0);
+    controller.send(boardAddress, tx0, packSOC, (uint8_t)(motorTemperatureTemp >> 8), (uint8_t)(motorTemperatureTemp & 0xFF), (uint8_t)(inverterTemperatureTemp >> 8), (uint8_t)(inverterTemperatureTemp & 0xFF), thermistorHighTempC, bmsFailsafe);
 
 }
 
@@ -117,6 +120,8 @@ void HVController_CAN::receiveCANData(CANBusMessage msg){
         dischargeContactorOn = (msg.bytes[0] >> 2) & 1;
         chargeContactorOn = (msg.bytes[0] >> 3) & 1;
         chargeSafetyOn = (msg.bytes[0] >> 4) & 1;
+        rmsFaultActive = (msg.bytes[0] >> 5) & 1;
+        contactorMismatch = (msg.bytes[0] >> 6) & 1;
         packSOC = msg.bytes[1];
 
         uint16_t motorTemperatureTemp = (uint16_t)(msg.bytes[2] << 8 | msg.bytes[3]);            //Convert to 0.1C increments
@@ -125,6 +130,7 @@ void HVController_CAN::receiveCANData(CANBusMessage msg){
         inverterTemperatureC = (float)(inverterTemperatureTemp / 10.0);                       //Convert to degrees C
 
         thermistorHighTempC = msg.bytes[6];
+        bmsFailsafe = msg.bytes[7];
     }
 }
 
@@ -223,8 +229,51 @@ void LPDRV_RearLeft_CAN::sendCANData(ICANController &controller){
 void LPDRV_RearLeft_CAN::receiveCANData(CANBusMessage msg){
     if(msg.addr == boardAddress){
         boardDetected = true;
-        bmsFaultInput = msg.bytes[0] & 1;  //Extract BMS fault from the first bit of byte 0
-        bmsFaultInput = msg.bytes[1] & 1;  //Extract BMS fault from the first bit of byte 1
+        bmsFaultInput = msg.bytes[0] & 1;     //Extract BMS fault from the first bit of byte 0
+        switchFaultInput = msg.bytes[1] & 1;  //Extract kill-switch fault from the first bit of byte 1
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////         CORNER LPDRV HEARTBEAT/FAULT FUNCTIONS (front-left, front-right, rear-right)         ////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/// @brief Creates a corner-driver heartbeat frame. Example: 'LPDRVCorner_CAN fl(FRONT_LEFT_DRIVER, BOARD_ID_LPDRV_FL);'
+/// @param boardAddr The CAN address this corner transmits on (FRONT_LEFT_DRIVER / FRONT_RIGHT_DRIVER / REAR_RIGHT_DRIVER).
+/// @param id The board ID for this corner (BOARD_ID_LPDRV_FL / _FR / _RR).
+LPDRVCorner_CAN::LPDRVCorner_CAN(uint32_t boardAddr, uint8_t id){
+    boardAddress = boardAddr;
+    boardID = id;
+}
+
+/// @brief Initializes the corner-driver fault fields to a default value.
+void LPDRVCorner_CAN::initialize(){
+    faultSeverity = FAULT_SEV_NONE;
+    outputFaultBitmap = 0;
+    bmsFaultInput = false;
+    switchFaultInput = false;
+    boardDetected = false;
+}
+
+/// @brief Sends this corner's heartbeat + local fault state in the agreed CAN format.
+/// @param controller The CAN bus controller attached to this microcontroller.
+void LPDRVCorner_CAN::sendCANData(ICANController &controller){
+    byte faultInputs = (bmsFaultInput ? 0x01 : 0) | (switchFaultInput ? 0x02 : 0);
+    controller.send(boardAddress, boardID, faultSeverity,
+                    outputFaultBitmap & 0xFF, (outputFaultBitmap >> 8) & 0xFF,
+                    faultInputs, 0, 0, 0);
+}
+
+/// @brief Extracts a corner heartbeat frame into this object's variables (used by the Power Controller).
+/// @param msg The CAN frame received by can.receive().
+void LPDRVCorner_CAN::receiveCANData(CANBusMessage msg){
+    if(msg.addr == boardAddress){
+        boardDetected = true;
+        boardID = msg.bytes[0];
+        faultSeverity = msg.bytes[1];
+        outputFaultBitmap = msg.bytes[2] | (msg.bytes[3] << 8);
+        bmsFaultInput = msg.bytes[4] & 0x01;
+        switchFaultInput = msg.bytes[4] & 0x02;
     }
 }
 

@@ -66,6 +66,12 @@ public:
     float motorTempC;
     bool faultActive;
 
+    // Per-board CAN liveness the app renders in the low-voltage board grid + "Board Fault" alert.
+    // Order: [Power, Dash, HV, iBooster, BMS, RMS]. Values: 0=off/not-yet-heard, 1=online, 2=fault.
+    // Set by the Power Controller's updateBoardHealthStatus(); serialized as "bs" in the "pc" packet.
+    static const uint8_t BOARD_STATUS_COUNT = 6;
+    uint8_t boardStatus[BOARD_STATUS_COUNT];
+
     // PowerController_CAN fields
     bool usingAppControl;
     // Telemetry of PowerController state
