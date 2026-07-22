@@ -333,6 +333,48 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+// Music Light-Show CAN Message Format. UPDATE THIS WHEN YOU ADD FIELDS OR ADDITIONAL CAN DATA!
+// The iPad app is the "conductor": it plays the song and, using the audio playback position as the
+// master clock, streams one of these frames per lighting cue over BLE -> Power Controller -> CAN.
+// Each board renders ITS OWN zone locally (so we send coarse per-zone cues, not per-pixel streams).
+// The app also sends a keepalive/control cue (zone SHOW_ZONE_CONTROL) a few times a second carrying
+// showActive; a board treats the show as OFF if showActive is cleared OR no cue arrives for
+// SHOW_MODE_TIMEOUT_MS, so a dropped BLE link always fails safe back to normal lighting.
+#define SHOW_CONTROL_ADDR   0x102
+// byte 0: zone (SHOW_ZONE_*). SHOW_ZONE_CONTROL (0xFF) is a keepalive - carries showActive, renders nothing.
+// byte 1: b0 showActive (1 = a show is running, 0 = stop show / return to normal lighting)
+// byte 2: red   (0-255)   - ignored by PWM-only zones (front/rear side markers)
+// byte 3: green (0-255)
+// byte 4: blue  (0-255)
+// byte 5: intensity (0-255) - overall brightness for this cue
+// byte 6: effect (SHOW_FX_*) - how the receiving board animates toward the cue color
+// byte 7: seq - rolling cue counter, for debug/dedup only
+//
+// Zones - one per addressable/controllable lighting area on the car:
+#define SHOW_ZONE_INTERIOR    0   // Dash Controller 100px WS2815 interior/dash strip (full RGB)
+#define SHOW_ZONE_EYES        1   // Front-left LPDRV (BDFL) 32x8 RGB matrices          (full RGB)
+#define SHOW_ZONE_REAR        2   // Rear-left  LPDRV (BDRL) tail/brake/turn strips     (full RGB)
+#define SHOW_ZONE_FRONT_SIDE  3   // Front-right LPDRV (BDFR) PWM side marker    (brightness only, color ignored)
+#define SHOW_ZONE_REAR_SIDE   4   // Rear-right  LPDRV (BDRR) PWM side marker    (brightness only, color ignored)
+#define SHOW_ZONE_BULBS       5   // Dash-driven headlight/highbeam/running bulbs (on/off strobe)
+#define SHOW_ZONE_CONTROL     0xFF // Keepalive/control cue - sets showActive, renders nothing
+#define SHOW_ZONE_COUNT       6    // Number of renderable zones (0..5)
+// Effects (byte 6). Each board renders these locally, allowing a compact CAN cue to drive a
+// complete RGBIC pattern without per-pixel traffic. PWM-only zones use the timing envelope.
+#define SHOW_FX_SOLID         0   // hold the cue colour until the next cue
+#define SHOW_FX_PULSE         1   // snap to the cue colour, then decay toward black
+#define SHOW_FX_STROBE        2   // hard on/off flash of the cue colour
+#define SHOW_FX_SWEEP         3   // one broad travelling band
+#define SHOW_FX_CHASE         4   // several narrow travelling bands
+#define SHOW_FX_RIPPLE        5   // expanding waves from the centre
+#define SHOW_FX_THEATER_CHASE 6   // alternating pixel groups, shifting on each frame
+#define SHOW_FX_SPARKLE       7   // deterministic glitter over a dim colour wash
+// A board leaves show mode if no show cue is heard for this long (ms). The app's keepalive rate must
+// be comfortably faster than this. Fails safe: a dropped BLE link returns the car to normal lighting.
+#define SHOW_MODE_TIMEOUT_MS  600
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
 // Battery-box cooling-fan temperature ramp.
 // The front-left LPDRV board (BDFL) drives the physical battery-box fan on LP6 from this ramp using
 // the hottest pack thermistor (HVController_CAN::thermistorHighTempC, received over CAN). The Power
@@ -578,6 +620,35 @@ class AppController_CAN{
     AppController_CAN(uint32_t boardAddr);
     void initialize();
     void sendCANData(ICANController &controller);
+    void receiveCANData(CANBusMessage msg);
+};
+
+/// @brief Music light-show cue frame (SHOW_CONTROL_ADDR). Sent by the Power Controller (BLE gateway)
+///        as it relays cues from the iPad app; received by every board that renders a lighting zone
+///        (Dash Controller interior strip, LPDRV corner boards). Each frame targets a single zone.
+///        The receiving board keeps its own per-zone state and animation timing - this class only
+///        encodes/decodes the wire format. See the SHOW_* macros above for the byte layout.
+class ShowController_CAN{
+    public:
+    uint32_t boardAddress;   //Always SHOW_CONTROL_ADDR. The zone lives in the payload, not the address.
+    bool showActive;         //True while a show is running. When a received frame clears this, boards return to normal lighting.
+    uint8_t zone;            //Which zone this cue targets (SHOW_ZONE_*), or SHOW_ZONE_CONTROL for a keepalive.
+    uint8_t red;             //Cue color red   (0-255). Ignored by PWM-only zones.
+    uint8_t green;           //Cue color green (0-255).
+    uint8_t blue;            //Cue color blue  (0-255).
+    uint8_t intensity;       //Overall cue brightness (0-255).
+    uint8_t effect;          //How to animate toward the cue color (SHOW_FX_*).
+    uint8_t seq;             //Rolling cue counter (debug/dedup only).
+    bool freshCue;           //Set true by receiveCANData when a show frame was just consumed; the caller
+                             //clears it after copying the cue into its per-zone state. Lets a board that
+                             //renders multiple zones (e.g. the Dash: interior + bulbs) demux by zone.
+    bool boardDetected;      //Set true once any show frame has been heard on the bus.
+
+    ShowController_CAN(uint32_t boardAddr);
+    void initialize();
+    /// @brief Build and transmit one show cue frame. Called by the gateway (Power Controller).
+    void sendCue(ICANController &controller, uint8_t cueZone, uint8_t r, uint8_t g, uint8_t b, uint8_t cueIntensity, uint8_t cueEffect, bool active, uint8_t sequence);
+    /// @brief Decode a received frame into this object. Sets freshCue=true only for SHOW_CONTROL_ADDR frames.
     void receiveCANData(CANBusMessage msg);
 };
 
