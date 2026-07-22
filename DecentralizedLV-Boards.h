@@ -328,7 +328,7 @@
 // byte 3: b0: usingAppControl, b1: runningLights (app-requested preference), b2: batteryFanOverride, b3: eyesMode ("eyes" animation override, never persisted)
 // byte 4: occupantFanPWM
 // byte 5: batteryFanManualPWM (fan speed to use while batteryFanOverride is set)
-// byte 6:
+// byte 6: ledStripBrightness (interior dash strip brightness, 0-255; app-controlled dimmer, defaults to 255)
 // byte 7:
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -615,6 +615,7 @@ class AppController_CAN{
     uint8_t occupantFanPWM;  //Occupant-cell fan speed the app is requesting (0=off .. 255=max). Carried on byte4.
     bool batteryFanOverride; //App-requested manual override of the battery-box fan. When true, the HV Controller ignores battery temperature and drives the fan at batteryFanManualPWM. TESTING/VALIDATION ONLY - never persisted, always defaults false on boot. Carried on byte3 bit2.
     uint8_t batteryFanManualPWM; //Battery-box fan speed to drive while batteryFanOverride is true (0=off .. 255=max). Carried on byte5.
+    uint8_t ledStripBrightness; //Interior dash LED strip brightness the app is requesting (0=off .. 255=max). Defaults to 255 (full) on boot. Carried on byte6.
     bool boardDetected;       //Flag to ensure we have heard from the board
 
     AppController_CAN(uint32_t boardAddr);

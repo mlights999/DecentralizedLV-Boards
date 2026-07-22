@@ -81,9 +81,11 @@ AppStatus::AppStatus() :
     occupantFanSpeed_App(0),
     batteryFanOverride_App(false),      //Default OFF - never persisted, so a power cycle always restores temperature-based control
     batteryFanManualSpeed_App(0),
+    ledStripBrightness_App(255),        //Default full brightness
     occupantFanSpeed_Current(0),
     batteryFanPWM(0),
     batteryFanOverride_Current(false),
+    ledStripBrightness_Current(255),    //Default full brightness
     odometerMiles(0.0)
 {
     // Initialize cell voltages array to 0
@@ -224,6 +226,7 @@ bool AppStatus::fromJSON(const std::string& json) {
     if (doc.containsKey("ofan")) occupantFanSpeed_App = doc["ofan"];  // Occupant-cell fan speed (0-255)
     if (doc.containsKey("bfo")) batteryFanOverride_App = doc["bfo"];  // Battery-box fan manual override (testing/validation only, never persisted)
     if (doc.containsKey("bfm")) batteryFanManualSpeed_App = doc["bfm"];  // Battery-box fan manual speed (0-255) used while override is on
+    if (doc.containsKey("lb")) ledStripBrightness_App = doc["lb"];  // Interior dash LED strip brightness (0-255)
     return true;
 }
 
@@ -335,6 +338,7 @@ std::string AppStatus::toDashboardJSON() const {
     doc["bfan"] = batteryFanPWM;             // Battery-box fan speed currently driven (0-255). Reflects the manual value while an override is active.
     doc["bfo"] = batteryFanOverride_Current; // Battery-fan manual override state the car accepted (echo of the app's request). Non-persistent: always false after a power cycle.
     doc["em"] = eyesMode_Current;            // "Eyes" animation state the car accepted (echo of the app's request). Non-persistent: always false after a power cycle.
+    doc["lb"] = ledStripBrightness_Current;  // Interior dash LED strip brightness currently commanded (0-255)
     std::string output;
     serializeJson(doc, output);
     return output;
