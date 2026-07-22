@@ -567,6 +567,7 @@ void AppController_CAN::initialize() {
     occupantFanPWM = 0;
     batteryFanOverride = false;   //Default OFF - battery fans follow temperature until the app explicitly overrides. Never persisted.
     batteryFanManualPWM = 0;
+    ledStripBrightness = 255;     //Default full brightness when flashed
     boardDetected = false;
 }
 
@@ -590,7 +591,7 @@ void AppController_CAN::sendCANData(ICANController &controller) {
              | ((runningLights ? 1 : 0) << 1)
              | ((batteryFanOverride ? 1 : 0) << 2)
              | ((eyesMode ? 1 : 0) << 3);
-    controller.send(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, batteryFanManualPWM, 0, 0);
+    controller.send(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, batteryFanManualPWM, ledStripBrightness, 0);
 }
 
 void AppController_CAN::receiveCANData(CANBusMessage msg) {
@@ -617,6 +618,7 @@ void AppController_CAN::receiveCANData(CANBusMessage msg) {
         eyesMode = (msg.bytes[3] >> 3) & 0x01;  // Extract the app-requested "eyes" animation override flag from byte3
         occupantFanPWM = msg.bytes[4];
         batteryFanManualPWM = msg.bytes[5];  // Manual battery-fan speed to use while batteryFanOverride is set
+        ledStripBrightness = msg.bytes[6];   // App-requested interior dash LED strip brightness
     }
 }
 
@@ -674,6 +676,51 @@ unsigned long convertBaudRateToMCP(unsigned long baudRate){
         }
     }
     return baudRate;            //If baudRate <= CAN_1000KBPS, then assumes we're already in MCP format
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////         MUSIC LIGHT-SHOW CONTROLLER FUNCTIONS        ////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ShowController_CAN::ShowController_CAN(uint32_t boardAddr){
+    boardAddress = boardAddr;
+}
+
+void ShowController_CAN::initialize(){
+    showActive = false;
+    zone = SHOW_ZONE_CONTROL;
+    red = 0;
+    green = 0;
+    blue = 0;
+    intensity = 0;
+    effect = SHOW_FX_SOLID;
+    seq = 0;
+    freshCue = false;
+    boardDetected = false;
+}
+
+/// @brief Build and transmit one show cue frame. Called by the gateway (Power Controller) when it
+///        relays a cue that arrived from the app over BLE. See the SHOW_* macros for the byte layout.
+void ShowController_CAN::sendCue(ICANController &controller, uint8_t cueZone, uint8_t r, uint8_t g, uint8_t b, uint8_t cueIntensity, uint8_t cueEffect, bool active, uint8_t sequence){
+    byte tx1 = active ? 0x01 : 0x00;
+    controller.send(boardAddress, cueZone, tx1, r, g, b, cueIntensity, cueEffect, sequence);
+}
+
+/// @brief Decode a received show cue frame. Sets freshCue=true so a board that renders several zones
+///        can demux the cue by its zone field. The caller clears freshCue after consuming it.
+void ShowController_CAN::receiveCANData(CANBusMessage msg){
+    if(msg.addr == boardAddress){
+        boardDetected = true;
+        zone = msg.bytes[0];
+        showActive = msg.bytes[1] & 0x01;
+        red = msg.bytes[2];
+        green = msg.bytes[3];
+        blue = msg.bytes[4];
+        intensity = msg.bytes[5];
+        effect = msg.bytes[6];
+        seq = msg.bytes[7];
+        freshCue = true;
+    }
 }
 
 
