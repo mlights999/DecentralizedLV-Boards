@@ -99,6 +99,7 @@ public:
     uint8_t occupantFanSpeed_App;   // Occupant-cell (front cabin) fan speed requested by the app, 0 (off) .. 255 (max). Parsed from JSON key "ofan".
     bool batteryFanOverride_App;    // Manual battery-box fan override requested by the app. Parsed from JSON key "bfo". TESTING/VALIDATION ONLY - never persisted, defaults false on boot so the pack always falls back to temperature-based control after a power cycle.
     uint8_t batteryFanManualSpeed_App;  // Battery-box fan speed to command while batteryFanOverride_App is true, 0 (off) .. 255 (max). Parsed from JSON key "bfm".
+    uint8_t ledStripBrightness_App;  // Interior dash LED strip brightness requested by the app, 0 (off) .. 255 (max). Defaults to 255 (full) on boot. Parsed from JSON key "lb".
 
     // Actual current state (merged from manual and app controls)
     bool leftTurnSignal_Current;
@@ -117,6 +118,7 @@ public:
     uint8_t occupantFanSpeed_Current;   // Occupant-cell fan speed actually being commanded (0-255). Echoed back to the app for display.
     uint8_t batteryFanPWM;              // Battery-box fan speed the HV Controller is currently driving (0-255). Read-only status for the app. Reflects the manual value while an override is active, otherwise the temperature-based value.
     bool batteryFanOverride_Current;    // Battery-fan override state the gateway is actually commanding over CAN. Echoed back to the app (JSON key "bfo") so the toggle reflects what the car accepted.
+    uint8_t ledStripBrightness_Current; // Interior dash LED strip brightness the Dash Controller actually accepted (0-255). Echoed back to the app (JSON key "lb").
 
     // ── Odometer ──────────────────────────────────────────────────────────
     //  Accumulated distance in miles, calculated from motorRPM.

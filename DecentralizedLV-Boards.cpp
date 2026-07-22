@@ -567,6 +567,7 @@ void AppController_CAN::initialize() {
     occupantFanPWM = 0;
     batteryFanOverride = false;   //Default OFF - battery fans follow temperature until the app explicitly overrides. Never persisted.
     batteryFanManualPWM = 0;
+    ledStripBrightness = 255;     //Default full brightness when flashed
     boardDetected = false;
 }
 
@@ -590,7 +591,7 @@ void AppController_CAN::sendCANData(ICANController &controller) {
              | ((runningLights ? 1 : 0) << 1)
              | ((batteryFanOverride ? 1 : 0) << 2)
              | ((eyesMode ? 1 : 0) << 3);
-    controller.send(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, batteryFanManualPWM, 0, 0);
+    controller.send(boardAddress, tx0, tx1, tx2, tx3, occupantFanPWM, batteryFanManualPWM, ledStripBrightness, 0);
 }
 
 void AppController_CAN::receiveCANData(CANBusMessage msg) {
@@ -617,6 +618,7 @@ void AppController_CAN::receiveCANData(CANBusMessage msg) {
         eyesMode = (msg.bytes[3] >> 3) & 0x01;  // Extract the app-requested "eyes" animation override flag from byte3
         occupantFanPWM = msg.bytes[4];
         batteryFanManualPWM = msg.bytes[5];  // Manual battery-fan speed to use while batteryFanOverride is set
+        ledStripBrightness = msg.bytes[6];   // App-requested interior dash LED strip brightness
     }
 }
 
