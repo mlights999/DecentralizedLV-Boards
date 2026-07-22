@@ -676,4 +676,49 @@ unsigned long convertBaudRateToMCP(unsigned long baudRate){
     return baudRate;            //If baudRate <= CAN_1000KBPS, then assumes we're already in MCP format
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////         MUSIC LIGHT-SHOW CONTROLLER FUNCTIONS        ////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+ShowController_CAN::ShowController_CAN(uint32_t boardAddr){
+    boardAddress = boardAddr;
+}
+
+void ShowController_CAN::initialize(){
+    showActive = false;
+    zone = SHOW_ZONE_CONTROL;
+    red = 0;
+    green = 0;
+    blue = 0;
+    intensity = 0;
+    effect = SHOW_FX_SOLID;
+    seq = 0;
+    freshCue = false;
+    boardDetected = false;
+}
+
+/// @brief Build and transmit one show cue frame. Called by the gateway (Power Controller) when it
+///        relays a cue that arrived from the app over BLE. See the SHOW_* macros for the byte layout.
+void ShowController_CAN::sendCue(ICANController &controller, uint8_t cueZone, uint8_t r, uint8_t g, uint8_t b, uint8_t cueIntensity, uint8_t cueEffect, bool active, uint8_t sequence){
+    byte tx1 = active ? 0x01 : 0x00;
+    controller.send(boardAddress, cueZone, tx1, r, g, b, cueIntensity, cueEffect, sequence);
+}
+
+/// @brief Decode a received show cue frame. Sets freshCue=true so a board that renders several zones
+///        can demux the cue by its zone field. The caller clears freshCue after consuming it.
+void ShowController_CAN::receiveCANData(CANBusMessage msg){
+    if(msg.addr == boardAddress){
+        boardDetected = true;
+        zone = msg.bytes[0];
+        showActive = msg.bytes[1] & 0x01;
+        red = msg.bytes[2];
+        green = msg.bytes[3];
+        blue = msg.bytes[4];
+        intensity = msg.bytes[5];
+        effect = msg.bytes[6];
+        seq = msg.bytes[7];
+        freshCue = true;
+    }
+}
+
 
