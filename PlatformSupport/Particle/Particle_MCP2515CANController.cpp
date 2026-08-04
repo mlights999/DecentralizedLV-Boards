@@ -1,27 +1,45 @@
 #include "Particle_MCP2515CANController.h"
+#include "../../DecentralizedLV-Boards.h"
 
 Particle_MCP2515CANController::Particle_MCP2515CANController(uint8_t chipSelectPin)
     : canController(nullptr), filterIndex(0), csPin(chipSelectPin), currentBaudRate(0) {
 }
 
+Particle_MCP2515CANController::~Particle_MCP2515CANController() {
+    delete canController;
+}
+
 bool Particle_MCP2515CANController::begin(uint32_t busSpeed) {
-    currentBaudRate = convertBaudRateToMCP(busSpeed);
+    delete canController;
     canController = new MCP_CAN(csPin);
-    const uint8_t initResult = canController->begin(MCP_STDEXT, currentBaudRate, MCP_8MHZ);
+    currentBaudRate = convertBaudRateToParticle(busSpeed);
+    const uint8_t initResult = canController->begin(MCP_STDEXT, convertBaudRateToMCP(currentBaudRate), MCP_8MHZ);
     if (initResult != CAN_OK) {
+        delete canController;
+        canController = nullptr;
         return false;
     }
     canController->setMode(MCP_NORMAL);
     SPI.setClockSpeed(8000000);
     filterIndex = 0;
+    hasInjectedMessage = false;
     return true;
 }
 
 bool Particle_MCP2515CANController::messageAvailable() {
-    return canController != nullptr && canController->checkReceive();
+    if (hasInjectedMessage) {
+        return true;
+    }
+    return canController != nullptr && canController->checkReceive() == CAN_MSGAVAIL;
 }
 
 bool Particle_MCP2515CANController::receive(CANBusMessage &outputMessage) {
+    if (hasInjectedMessage) {
+        outputMessage = injectedMessage;
+        hasInjectedMessage = false;
+        return true;
+    }
+
     if (!messageAvailable()) {
         return false;
     }
@@ -29,7 +47,9 @@ bool Particle_MCP2515CANController::receive(CANBusMessage &outputMessage) {
     uint32_t rxId = 0;
     unsigned char len = 0;
     unsigned char rxBuf[8] = {0};
-    canController->readMsgBuf(&rxId, &len, rxBuf);
+    if (canController->readMsgBuf(&rxId, &len, rxBuf) != CAN_OK) {
+        return false;
+    }
 
     if (rxId == 0) {
         return false;
@@ -37,35 +57,48 @@ bool Particle_MCP2515CANController::receive(CANBusMessage &outputMessage) {
 
     outputMessage.addr = rxId;
     for (uint8_t i = 0; i < 8; ++i) {
+        outputMessage.bytes[i] = 0;
+    }
+    if (len > 8) {
+        len = 8;
+    }
+    for (uint8_t i = 0; i < len; ++i) {
         outputMessage.bytes[i] = rxBuf[i];
     }
     return true;
 }
 
-void Particle_MCP2515CANController::send(uint32_t addr, uint8_t data0, uint8_t data1, uint8_t data2, uint8_t data3, uint8_t data4, uint8_t data5, uint8_t data6, uint8_t data7) {
+ICANController::CANResult Particle_MCP2515CANController::send(uint32_t addr, uint8_t data0, uint8_t data1, uint8_t data2, uint8_t data3, uint8_t data4, uint8_t data5, uint8_t data6, uint8_t data7) {
     if (!canController) {
-        return;
+        return ICANController::CANResult::Failure;
     }
 
     byte data[8] = {data0, data1, data2, data3, data4, data5, data6, data7};
-    canController->sendMsgBuf(addr, 0, 8, data);
+    return canController->sendMsgBuf(addr, 0, 8, data) == CAN_OK
+        ? ICANController::CANResult::Success
+        : ICANController::CANResult::Failure;
 }
 
-void Particle_MCP2515CANController::send(CANBusMessage inputMessage) {
+ICANController::CANResult Particle_MCP2515CANController::send(CANBusMessage inputMessage) {
     if (!canController) {
-        return;
+        return ICANController::CANResult::Failure;
     }
 
     byte data[8] = {inputMessage.bytes[0], inputMessage.bytes[1], inputMessage.bytes[2], inputMessage.bytes[3], inputMessage.bytes[4], inputMessage.bytes[5], inputMessage.bytes[6], inputMessage.bytes[7]};
-    canController->sendMsgBuf(inputMessage.addr, 0, 8, data);
+    return canController->sendMsgBuf(inputMessage.addr, 0, 8, data) == CAN_OK
+        ? ICANController::CANResult::Success
+        : ICANController::CANResult::Failure;
 }
 
 void Particle_MCP2515CANController::setBusSpeed(uint32_t newBusSpeed) {
     if (!canController) {
         return;
     }
-    currentBaudRate = convertBaudRateToMCP(newBusSpeed);
-    canController->begin(MCP_STDEXT, currentBaudRate, MCP_8MHZ);
+    const uint32_t particleBaudRate = convertBaudRateToParticle(newBusSpeed);
+    if (canController->begin(MCP_STDEXT, convertBaudRateToMCP(particleBaudRate), MCP_8MHZ) == CAN_OK) {
+        currentBaudRate = particleBaudRate;
+        canController->setMode(MCP_NORMAL);
+    }
 }
 
 uint32_t Particle_MCP2515CANController::getBusSpeed() {
@@ -92,7 +125,7 @@ bool Particle_MCP2515CANController::addFilter(uint32_t address) {
 }
 
 uint8_t Particle_MCP2515CANController::getRemainingFilters() {
-    return static_cast<uint8_t>(6 - filterIndex);
+    return filterIndex < 6 ? static_cast<uint8_t>(6 - filterIndex) : 0;
 }
 
 void Particle_MCP2515CANController::sleep() {
@@ -107,6 +140,11 @@ void Particle_MCP2515CANController::wake() {
         return;
     }
     canController->setMode(MCP_NORMAL);
+}
+
+void Particle_MCP2515CANController::injectFakeFrame(const CANBusMessage &message) {
+    injectedMessage = message;
+    hasInjectedMessage = true;
 }
 
 uint32_t Particle_MCP2515CANController::convertBaudRateToMCP(uint32_t baudRate) {

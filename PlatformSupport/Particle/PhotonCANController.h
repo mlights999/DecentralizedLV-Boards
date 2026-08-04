@@ -12,18 +12,23 @@ public:
     bool begin(uint32_t busSpeed) override;
     bool messageAvailable() override;
     bool receive(CANBusMessage &outputMessage) override;
-    void send(uint32_t addr, uint8_t data0, uint8_t data1, uint8_t data2, uint8_t data3, uint8_t data4, uint8_t data5, uint8_t data6, uint8_t data7) override;
-    void send(CANBusMessage inputMessage) override;
+    CANResult send(uint32_t addr, uint8_t data0, uint8_t data1, uint8_t data2, uint8_t data3, uint8_t data4, uint8_t data5, uint8_t data6, uint8_t data7) override;
+    CANResult send(CANBusMessage inputMessage) override;
     void setBusSpeed(uint32_t newBusSpeed) override;
     uint32_t getBusSpeed() override;
     bool addFilter(uint32_t address) override;
     uint8_t getRemainingFilters() override;
+    void injectFakeFrame(const CANBusMessage &message) override;
 
     void sleep();
     void wake();
 
 private:
-    uint32_t currentBaudRate;
+    uint32_t currentBaudRate = 0;
+    bool pendingMessage = false;
+    CANBusMessage pendingFrame;
+    bool hasInjectedMessage = false;
+    CANBusMessage injectedMessage;
 };
 
 #endif

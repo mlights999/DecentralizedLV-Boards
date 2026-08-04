@@ -12,6 +12,12 @@ class CANBusMessage{
     // Internal data for the CAN frame
     uint8_t bytes[8] = {0};
 
+    // Last time this CAN frame was published on the bus.
+    uint64_t last_published_time_ms = 0;
+
+    // Period used when this frame is published periodically.
+    uint32_t publish_period_ms = 0;
+
     // Updates the internally stored bytes from an array. Assumes the bytes array is count long
     void update(uint32_t addr, uint8_t *bytes, uint8_t count)
     {
